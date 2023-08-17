@@ -26,13 +26,15 @@ nf-core code that I have seen so far seems to be ugly and unpleasant.
 
 2. Their scripts create output file names like:
 
-> -o ${prefix}.bam##idx##${prefix}.bam.bai
+```-o ${prefix}.bam##idx##${prefix}.bam.bai
+```
 
  so copying those named files to the Galaxy history file names before and after script execution will be needed
 
 3. They pass variables, including external ones, into scripts by templating and while we can do that, some of those variables are changed by DDL statements - we would have to reliably parse these - this example wouldn’t be hard to hack but there are more complex examples:
 
->script:
+```
+ script:
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args = task.ext.args ?: ''
     def args2 = task.ext.args2 ?: ''
@@ -60,7 +62,7 @@ nf-core code that I have seen so far seems to be ugly and unpleasant.
         samblaster: \$( samblaster --version |& sed 's/^.*samblaster: Version //' )
     END_VERSIONS
     """
-
+```
 
 ### Reproducibility issues
 1. Bash scripts call a binary - presumably the one installed as a dependency from the “conda” entry in the main.nf file such as https://github.com/nf-core/modules/blob/master/modules/nf-core/abacas/main.nf
