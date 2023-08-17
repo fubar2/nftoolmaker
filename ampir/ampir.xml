@@ -1,0 +1,82 @@
+<tool name="ampir" id="ampir" version="'0.01'">
+  <!--Source in git at: https://github.com/fubar2/galaxy_tf_overlay-->
+  <!--Created by 'toolfactory@galaxy.org' at 17/08/2023 18:30:35 using the Galaxy Tool Factory.-->
+  <description>A toolkit to predict antimicrobial peptides from protein sequences on a genome-wide scale.</description>
+  <requirements>
+    <requirement version="1.1.0" type="package">r-ampir</requirement>
+    <requirement type="package">Rscript</requirement>
+  </requirements>
+  <stdio>
+    <exit_code range="1:" level="fatal"/>
+  </stdio>
+  <version_command><![CDATA[echo "'0.01'"]]></version_command>
+  <command><![CDATA[Rscript
+$runme
+#if $faa
+ --faa $faa 
+#end if
+--amps_faa
+$amps_faa
+--amps_tsv
+$amps_tsv
+--min_length
+'$min_length'
+--min_probability
+'$min_probability'
+--model
+'$model']]></command>
+  <configfiles>
+    <configfile name="runme"><![CDATA[#raw
+
+#!/usr/bin/env Rscript
+library(ampir)
+
+input_seqs <- read_faa('${faa}')
+prediction <- predict_amps(input_seqs,${min_length},model = '${model}')
+prediction <- prediction[which(prediction\$prob_AMP >= as.numeric(${min_probability})), ]
+output_seqs <- input_seqs[row.names(prediction), ]
+write.table(prediction, file = "${prefix}.tsv", row.names = FALSE, sep = "\t", quote = FALSE, dec = '.')
+df_to_faa(output_seqs, "${prefix}.faa")
+
+version_file_path <- "versions.yml"
+version_ampir <- paste(unlist(packageVersion("ampir")), collapse = ".")
+f <- file(version_file_path, "w")
+writeLines('"${task.process}":', f)
+writeLines("    ampir: ", f, sep = "")
+writeLines(version_ampir, f)
+close(f)
+
+#end raw]]></configfile>
+  </configfiles>
+  <inputs>
+    <param name="faa" type="data" optional="false" label="FASTA file containing amino acid sequences" help="" format="faa,fasta" multiple="false"/>
+    <param name="min_length" type="integer" value="" label="Minimum protein length for which predictions will be generated" help=""/>
+    <param name="min_probability" type="float" value="" label="Cut-off for AMP prediction" help=""/>
+    <param name="model" type="select" label="Built-in model for AMP prediction" help="">
+      <option value="precursor">precursor</option>
+      <option value="mature">mature</option>
+    </param>
+  </inputs>
+  <outputs>
+    <data name="amps_faa" format="faa" label="File containing AMP predictions in amino acid FASTA format" hidden="false"/>
+    <data name="amps_tsv" format="tsv" label="File containing AMP predictions in TSV format" hidden="false"/>
+  </outputs>
+  <tests>
+    <test>
+      <output name="amps_faa" value="amps_faa_sample" compare="sim_size" delta="1000"/>
+      <output name="amps_tsv" value="amps_tsv_sample" compare="sim_size" delta="1000"/>
+      <param name="faa" value="faa_sample"/>
+      <param name="min_length" value=""/>
+      <param name="min_probability" value=""/>
+      <param name="model" value="precursor"/>
+    </test>
+  </tests>
+  <help><![CDATA[ampir: {'description': 'A toolkit to predict antimicrobial peptides from protein sequences on a genome-wide scale.', 'homepage': 'https://github.com/Legana/ampir', 'documentation': 'https://cran.r-project.org/web/packages/ampir/index.html', 'tool_dev_url': 'https://github.com/Legana/ampir', 'doi': '10.1093/bioinformatics/btaa653', 'licence': ['GPL v2']}
+
+
+]]></help>
+  <citations>
+    <citation type="doi">10.1093/bioinformatics/bts573</citation>
+  </citations>
+</tool>
+
