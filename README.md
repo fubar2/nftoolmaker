@@ -26,7 +26,8 @@ nf-core code that I have seen so far seems to be ugly and unpleasant.
 
 2. Their scripts create output file names like:
 
-```-o ${prefix}.bam##idx##${prefix}.bam.bai
+```
+-o ${prefix}.bam##idx##${prefix}.bam.bai
 ```
 
  so copying those named files to the Galaxy history file names before and after script execution will be needed
