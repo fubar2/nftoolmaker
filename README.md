@@ -68,17 +68,17 @@ nf-core code that I have seen so far seems to be ugly and unpleasant.
 ### Reproducibility issues
 1. Bash scripts call a binary - presumably the one installed as a dependency from the “conda” entry in the main.nf file such as https://github.com/nf-core/modules/blob/master/modules/nf-core/abacas/main.nf
 
-2. The architecture seems terribly bad for reproducibility IMHO in places - the version is recorded at the end of each run, but really not ideal.
-
-Examples of “updaters” include:
-amrfinderplus includes an updater module, that grabs whatever the latest binary happens to be for this tool - they do record the version at least I guess - https://github.com/nf-core/funcscan/blob/1.1.3/modules/nf-core/amrfinderplus/update/main.nf
-A gem of an example of how tools are updated from https://github.com/nf-core/funcscan/blob/1.1.3/modules/nf-core/antismash/antismashlitedownloaddatabases/main.nf that seems to poke things from the local python3.8 with a big stick. This is scary. cp_cmd = ( session.config.conda && session.config.conda.enabled ) ? "cp -r \$(python -c 'import antismash;print(antismash.__file__.split(\"/__\")[0])') antismash_dir;" : "cp -r /usr/local/lib/python3.8/site-packages/antismash antismash_dir;"
+2. The architecture seems to have many opportunities to wreck reproducibility IMHO.
+   Although the version is recorded at the end of each run, that itself doesn't help ensure a run could be completely replicated.
+   Examples of “updaters”: amrfinderplus includes an updater module, that grabs whatever the latest binary happens to be for this tool - they do record the version at least I guess - https://github.com/nf-core/funcscan/blob/1.1.3/modules/nf-core/amrfinderplus/update/main.nf
+   A gem of an example of how tools are updated from https://github.com/nf-core/funcscan/blob/1.1.3/modules/nf-core/antismash/antismashlitedownloaddatabases/main.nf that seems to poke things from the local python3.8 with a big stick. This is scary. cp_cmd = ( session.config.conda && session.config.conda.enabled ) ? "cp -r \$(python -c 'import antismash;print(antismash.__file__.split(\"/__\")[0])') antismash_dir;" : "cp -r /usr/local/lib/python3.8/site-packages/antismash antismash_dir;"
 
 3. Some scripts have elaborate DSL preambles that will be tricky to translate.
 
 4. Inputs often have regexp patterns - need to parse to create useful Galaxy forms such as:
+```
 - faa:
     type: file
     description: FASTA file containing amino acid sequences
     pattern: "*.{faa,fasta}"
-
+```
