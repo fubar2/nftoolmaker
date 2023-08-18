@@ -15,7 +15,18 @@ import yaml
 
 """
 FILTERCHARS = "[]{}*.'"
-
+coldict = {"name": "nfcoreout", "kind": "list", "discover": "__name_and_ext__", "label": "nfcore module spawn"}
+coll = json.dumps(coldict)
+clend = '''--collection
+%s
+--nftest
+--tested_tool_out
+'$untested_tool'
+--galaxy_root
+'$__root_dir__'
+--tool_dir
+'$__tool_directory__' ''' % coll
+CLCODA = clend.split('\n')
 
 class ParseNFMod:
     """
@@ -150,7 +161,7 @@ now {'tool_name': 'ampir', 'fasta': ["[ [ id:'test', single_end:false ], // meta
         {'faa': {'type': 'file', 'description': 'FASTA file containing amino acid sequences', 'pattern': '*.{faa,fasta}'}}
 
         need --input_files '{"name": "/home/ross/rossgit/galaxytf/database/objects/d/d/4/dataset_dd49e13c-bd4d-4f8b-8eaa-863483d021f6.dat", "CL": "input_tab", "format": "tabular", "label": "Tabular input file to plot", "help": "If 5000+ rows, html output will fail, but png will work.", "required": "required"}'
-        Need a path but no samples are available
+        Need to add a cp to copy the named file to the template path
         """
         pdict = {}
         pid = list(inpdict.keys())[0]
@@ -377,8 +388,6 @@ nfmod = ParseNFMod(nft, nfym)
 cl = nfmod.tfcl
 cl.insert(0, "toolfactory.py")
 cl.insert(0, "/home/ross/rossgit/galaxytf/.venv/bin/python")
-cl.append("--collection")
-cl.append( '{"name": "nfcoreout", "kind": "list", "discover": "__name_and_ext__", "label": "nfcore module spawn"}')
-cl.append('--nftest')
+cl += CLCODA
 print("cl=", "\n".join(cl))
 rc = subprocess.run(cl)
