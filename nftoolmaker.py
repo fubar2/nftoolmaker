@@ -76,9 +76,16 @@ class ParseNFMod:
         https://github.com/nf-core/test-datasets/blob/modules/data/genomics/prokaryotes/candidatus_portiera_aleyrodidarum/genome/proteome.fasta and it cannot be
      inferred easily - need to use os.path.walk to find all the directories etc. Fugly since the entire data repository is ?6GB or so.
      for testing just stub a dict
+
+     svn ls -R https://github.com/nf-core/test-datasets.git
+     and
+     git clone -b updates_names https://github.com/nf-core/test-datasets.git
+     since updates_names seems to have a copy of the generic ones
+     or perhaps
+     git clone -b updates_names --depth 1 https://github.com/nf-core/test-datasets.git
+
         """
         self.testfileURLS = {"['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta']":'https://github.com/nf-core/test-datasets/blob/modules/data/genomics/prokaryotes/candidatus_portiera_aleyrodidarum/genome/proteome.fasta'}
-
 
 
     def getTestInfo(self):
