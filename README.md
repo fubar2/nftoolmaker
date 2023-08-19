@@ -33,11 +33,13 @@ nf-core code that I have seen so far seems to be ugly and unpleasant.
 ### Reasons not to do this:
 
 The testcase, ampir uses a shared proteome as the test input.
-```https://github.com/nf-core/test-datasets/tree/modules/data/genomics/prokaryotes/candidatus_portiera_aleyrodidarum/genome
+```
+https://github.com/nf-core/test-datasets/tree/modules/data/genomics/prokaryotes/candidatus_portiera_aleyrodidarum/genome
 ```
 This is discovered by finding https://github.com/nf-core/modules/blob/master/tests/modules/nf-core/ampir/main.nf which gives the test parameters and the proteome to use. Boy, they make it brittle by this indirection saving some copies of test data. Seems an awkward decision to me.
 
-```#!/usr/bin/env nextflow
+```
+#!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
 include { AMPIR } from '../../../../modules/nf-core/ampir/main.nf'
 workflow test_ampir {
