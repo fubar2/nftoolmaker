@@ -59,6 +59,7 @@ class ParseNFMod:
         self.args = args
         self.localTestDir = os.path.join(args.tool_dir, "nfmodtestfiles")
         self.localTestFile = os.path.join(args.tool_dir, "nfgenomicstestdata.txt")
+        self.setTestFiles()
         self.makeCLCoda()
         self.tfcl = ["--parampass", "embednfmod"]
         self.tool_name = nfy["name"]
@@ -122,29 +123,7 @@ class ParseNFMod:
         print("clend", clend)
         self.cl_coda = clend.split("\n")
 
-    def getTestInfo(self):
-        """
-                Parse the test inputs in https://github.com/nf-core/modules/blob/master/tests/modules/nf-core/ampir/main.nf
-                #!/usr/bin/env nextflow
-        nextflow.enable.dsl = 2
-        include { AMPIR } from '../../../../modules/nf-core/ampir/main.nf'
-        workflow test_ampir {
-            fasta = [ [ id:'test', single_end:false ], // meta map          file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
-            ]
-            model = "precursor"
-            min_length = 10
-        min_probability = "0.7"
-            AMPIR ( fasta, model, min_length, min_probability )
-        }
-
-        now {'tool_name': 'ampir', 'fasta': ["[ [ id:'test', single_end:false ], // meta map", 'https://github.com/nf-core/test-datasets/blob/modules/data/genomics/prokaryotes/candidatus_portiera_aleyrodidarum/genome/proteome.fasta'], 'model': ['"precursor"'], 'min_length': ['10'], 'min_probability': ['"0.7"']}
-
-             This works!
-             wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/genomics/prokaryotes/candidatus_portiera_aleyrodidarum/genome/proteome.fasta
-
-
-        """
-        testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
+    def setTestFiles(self)
         td = open(self.localTestFile, "r").readlines()
         td = [x.strip() for x in td]
         td = [
@@ -159,6 +138,127 @@ class ParseNFMod:
                 totdups += 1
             else:
                 file_dict[lastbit] = [x] # fugly but assume the files are the same if same name
+        self.file_dict = file_dict
+
+    def saveTestToLocalpath(self, w, i)
+        tparam = w[i]
+        if w[i+1] == "[": # files seem to be maps always.
+            while not w[i].startswith('file(params') and not w[i] in ["}", "]"]:
+                 i += 1
+           #  file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
+            testfpath = (
+                w[i].split("[", 1)[1]
+                .split("],")[0]
+                .replace("']['", "/")
+                .replace("'", "")
+            )  # 'candidatus_portiera_aleyrodidarum/genome/proteome_fasta'
+            tfilename = testfpath.split('/')[-1].replace('_','.') # punt?
+            tstart = '/'.join(testfpath.split('/')[:-1])
+            testfpath = os.path.join(tstart, tfilename)
+            # 'candidatus_portiera_aleyrodidarum/genome/proteome.fasta'
+            localpath = testfpath.replace("/", "_")
+            localpath = os.path.join(self.localTestDir, localpath)
+            foundpaths = self.file_dict.get(tfilename, None)
+            print('### testfpath', testfpath, 'localpath =', localpath)
+            if len(foundpaths) == 0:
+                print(
+                    "test specifier",
+                    testfpath,
+                    "not found in directory of the test repository. Please run the updater",
+                )
+                sys.exit(3)
+            testU = testURLprefix + foundpaths[0]
+            cl = ["wget", "-O", localpath, testU]
+            p = subprocess.run(cl)
+            if p.returncode:
+                print("Got", p.returncode, "from executing", " ".join(cl))
+                sys.exit(5)
+            return (i, localpath)
+
+
+
+    def nfParseTests(self, nftest):
+        """
+shlex.split(shite)
+
+['#!/usr/bin/env', 'nextflow', 'nextflow.enable.dsl', '=', '2', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_NO_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'workflow', 'test_survivor_filter_no_bed', '{', 'input_no_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', '[]', ']', 'SURVIVOR_FILTER_NO_BED', '(', 'input_no_bed,', '51,', '10001,', '0.01,', '10', ')', '}', 'workflow', 'test_survivor_filter', '{', 'input_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', 'file(params.test_data[homo_sapiens][genome][genome_bed],', 'checkIfExists:', 'true)', ']', 'SURVIVOR_FILTER_BED', '(', 'input_bed,', '51,', '10001,', '0.01,', '10', ')', '}']
+
+keywords - cannot assume linestart.
+"include",
+"workflow"
+modname.uppercase()
+
+includes contain the workflow test names
+workflow { to } has the test file and test name to match up
+Inside the workflow the workflow name signals a section with parameter names to use in order inside parentheses.
+            """
+            def parseATest(w):
+                """
+                split into bits - test file, test name, test parameter values for each test
+                """
+                tname = w[0]
+                tparamvalues = {} # indexed by test param name k
+                while i < len(w):
+                    if w[i].startswith(self.args.tool_name).upper(): # is a test command line at end
+                        i += 1
+                        tparamnames = []
+                        while not w[i] == ")" and not w[i] == "}":
+                            tparamnames.append(w[i])
+                            i += 1
+                    i += 1
+                    if w[i+1] == "=": # start of a test parameter
+                        if w[i+2] == "[": # mapping start to
+                            i, v = self.saveTestToLocalpath(w,i)
+                            i += 1
+                        else:
+                            v = w[i+1] # simples
+                            i += 2
+                        tparamtvalues[tparam] = v
+                return {"tname" : tname, "tparamnames":tparamnames, "tparamvalues":tparamvalues}
+
+        kw = ["include", "workflow"]
+        nf = shlex.split(nftest)
+        nftests = []
+        testnames = []
+        testincs = []
+        inwf = False
+        ininc = False
+        ne = len(nf)
+        i = 0
+        while i < ne:
+            e = nf[i]
+            if e == "workflow"): # all to }
+                awf = []
+                while nf[i] != "}":
+                    awf.append(nf[i])
+                    i += 1
+                i += 1
+               nftests.append(awf)
+            elif e == "include":
+                aninc = []
+                i += 1
+                while nf[i] != "}":
+                    aninc.append(nf[i])
+                    i += 1
+                testincs.append(aninc)
+        for inc in testincs:
+            testincs.append(parseAInc(inc))
+        for w in workflows:
+            nftests.append(parseATest(w,))
+        self.nftests = nftests
+
+
+
+    def getTestInfo(self):
+        """
+
+
+wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/genomics/prokaryotes/candidatus_portiera_aleyrodidarum/genome/proteome.fasta
+
+
+        """
+        testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
+        self.setTestFiles()
         if '_' in self.tool_name: # ridiculous hack for multi tool modules
             submod = self.tool_name.replace('_','/') # punt
             testything = "tests/modules/nf-core/%s/main.nf" % submod
@@ -167,6 +267,7 @@ class ParseNFMod:
         if os.path.exists(testything):
             nftest = open(testything, "r").readlines()
             nftest = [x.strip() for x in nftest]
+            testbits = self.nfParseTests(nftest)
         else:
             nftest = None
             print(
@@ -174,19 +275,6 @@ class ParseNFMod:
                 testything,
                 "not found",
             )
-        foundtest = False
-        testbits = []
-        for row in nftest:
-            if foundtest:
-                testbits.append(row)
-            if row.startswith(self.tool_name.upper()):
-                # this row gives the parameter names in order
-                # test input files may not use the internal ones stupidly
-                self.testParamIds = row.replace(",", "").split(" ", 1)[1].split(" ")
-                print('### testparamids=', self.testParamIds)
-                foundtest = False
-            if row.startswith("workflow test"):
-                foundtest = True
         testthings = {"tool_name": self.tool_name}
         testpaths = {}
         insect = False
