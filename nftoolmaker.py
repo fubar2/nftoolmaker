@@ -142,38 +142,39 @@ class ParseNFMod:
 
     def saveTestToLocalpath(self, w, i)
         tparam = w[i]
-        if w[i+1] == "[": # files seem to be maps always.
-            while not w[i].startswith('file(params') and not w[i] in ["}", "]"]:
-                 i += 1
-           #  file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
-            testfpath = (
-                w[i].split("[", 1)[1]
-                .split("],")[0]
-                .replace("']['", "/")
-                .replace("'", "")
-            )  # 'candidatus_portiera_aleyrodidarum/genome/proteome_fasta'
-            tfilename = testfpath.split('/')[-1].replace('_','.') # punt?
-            tstart = '/'.join(testfpath.split('/')[:-1])
-            testfpath = os.path.join(tstart, tfilename)
-            # 'candidatus_portiera_aleyrodidarum/genome/proteome.fasta'
-            localpath = testfpath.replace("/", "_")
-            localpath = os.path.join(self.localTestDir, localpath)
-            foundpaths = self.file_dict.get(tfilename, None)
-            print('### testfpath', testfpath, 'localpath =', localpath)
-            if len(foundpaths) == 0:
-                print(
-                    "test specifier",
-                    testfpath,
-                    "not found in directory of the test repository. Please run the updater",
-                )
-                sys.exit(3)
-            testU = testURLprefix + foundpaths[0]
-            cl = ["wget", "-O", localpath, testU]
-            p = subprocess.run(cl)
-            if p.returncode:
-                print("Got", p.returncode, "from executing", " ".join(cl))
-                sys.exit(5)
-            return (i, localpath)
+        while not w[i].startswith('file(params') and not w[i] in ["}", "]"]:
+             i += 1
+       #  file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
+        testfpath = (
+            w[i].split("[", 1)[1]
+            .split("],")[0]
+            .replace("']['", "/")
+            .replace("'", "")
+        )  # 'candidatus_portiera_aleyrodidarum/genome/proteome_fasta'
+        tfilename = testfpath.split('/')[-1].replace('_','.')
+        # so much evil, pointless obfuscation and indirection
+        # because we can.
+        tstart = '/'.join(testfpath.split('/')[:-1])
+        testfpath = os.path.join(tstart, tfilename)
+        # 'candidatus_portiera_aleyrodidarum/genome/proteome.fasta'
+        localpath = testfpath.replace("/", "_")
+        localpath = os.path.join(self.localTestDir, localpath)
+        foundpaths = self.file_dict.get(tfilename, None)
+        print('### testfpath', testfpath, 'localpath =', localpath)
+        if len(foundpaths) == 0:
+            print(
+                "test specifier",
+                testfpath,
+                "not found in directory of the test repository. Please run the updater",
+            )
+            sys.exit(3)
+        testU = testURLprefix + foundpaths[0]
+        cl = ["wget", "-O", localpath, testU]
+        p = subprocess.run(cl)
+        if p.returncode:
+            print("Got", p.returncode, "from executing", " ".join(cl))
+            sys.exit(5)
+        return (i, localpath)
 
 
 
