@@ -213,7 +213,8 @@ class Tool_Factory:
             self.cl_suffix = None
         if self.args.script_path:
             for ex in self.executeme:
-                aXCL(ex)
+                if ex:
+                    aXCL(ex)
             aXCL("$runme")
         else:
             for ex in self.executeme:

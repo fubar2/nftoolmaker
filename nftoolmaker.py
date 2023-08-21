@@ -53,7 +53,9 @@ class ParseNFMod:
     """
 
     def __init__(self, nft, nfy, args):
+        self.testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
         self.scriptPrefixSubs = {}
+        self.nfTests = [] # will ignore multiples but collect all
         self.nftext = nft
         self.nfyaml = nfy
         self.args = args
@@ -66,24 +68,29 @@ class ParseNFMod:
         self.getTestInfo()
         self.makeMeta()
         stub = self.getsection("stub:")  # not all have these - no idea what they're for
-        for i, inpdict in enumerate(nfy["input"]):
+        indx = 0
+        print('### nfy',nfy)
+        for inpdict in nfy["input"]:
             pname = list(inpdict.keys())[0]
             ptype = inpdict[pname]["type"]
-            if ptype == "file":
-                self.makeInfile(inpdict, i)
-            elif ptype == "string":
-                self.makeString(inpdict, i)
-            elif ptype in ["number", "integer"]:
-                self.makeNum(inpdict, i)
-            elif ptype == "map":
+            if ptype == "map":
                 print("Ignoring map specified as input %s" % str(inpdict))
+            elif ptype == "file":
+                self.makeInfile(inpdict,indx)
+                indx += 1
+            elif ptype == "string":
+                self.makeString(inpdict, indx)
+                indx += 1
+            elif ptype in ["number", "integer"]:
+                self.makeNum(inpdict, indx)
+                indx += 1
             else:
                 print("### unknown input type encountered in %s" % str(inpdict))
         for inpdict in nfy["output"]:
             pname = list(inpdict.keys())[0]
             ptype = inpdict[pname]["type"]
             if ptype == "file":
-                tfdict = self.makeOutfile(inpdict, i)
+                tfdict = self.makeOutfile(inpdict)
             elif ptype == "map":
                 print("Ignoring map specified as output %s" % str(inpdict))
             else:
@@ -123,7 +130,7 @@ class ParseNFMod:
         print("clend", clend)
         self.cl_coda = clend.split("\n")
 
-    def setTestFiles(self)
+    def setTestFiles(self):
         td = open(self.localTestFile, "r").readlines()
         td = [x.strip() for x in td]
         td = [
@@ -140,125 +147,172 @@ class ParseNFMod:
                 file_dict[lastbit] = [x] # fugly but assume the files are the same if same name
         self.file_dict = file_dict
 
-    def saveTestToLocalpath(self, w, i)
-        tparam = w[i]
-        while not w[i].startswith('file(params') and not w[i] in ["}", "]"]:
-             i += 1
-       #  file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
-        testfpath = (
-            w[i].split("[", 1)[1]
-            .split("],")[0]
-            .replace("']['", "/")
-            .replace("'", "")
-        )  # 'candidatus_portiera_aleyrodidarum/genome/proteome_fasta'
-        tfilename = testfpath.split('/')[-1].replace('_','.')
-        # so much evil, pointless obfuscation and indirection
-        # because we can.
-        tstart = '/'.join(testfpath.split('/')[:-1])
-        testfpath = os.path.join(tstart, tfilename)
-        # 'candidatus_portiera_aleyrodidarum/genome/proteome.fasta'
-        localpath = testfpath.replace("/", "_")
-        localpath = os.path.join(self.localTestDir, localpath)
-        foundpaths = self.file_dict.get(tfilename, None)
-        print('### testfpath', testfpath, 'localpath =', localpath)
-        if len(foundpaths) == 0:
-            print(
-                "test specifier",
-                testfpath,
-                "not found in directory of the test repository. Please run the updater",
-            )
-            sys.exit(3)
-        testU = testURLprefix + foundpaths[0]
-        cl = ["wget", "-O", localpath, testU]
-        p = subprocess.run(cl)
-        if p.returncode:
-            print("Got", p.returncode, "from executing", " ".join(cl))
-            sys.exit(5)
-        return (i, localpath)
 
-
-
-    def nfParseTests(self, nftest):
+    def nfParseTests(self, nftesttext):
         """
-shlex.split(shite)
+    shlex.split(shite)
 
-['#!/usr/bin/env', 'nextflow', 'nextflow.enable.dsl', '=', '2', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_NO_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'workflow', 'test_survivor_filter_no_bed', '{', 'input_no_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', '[]', ']', 'SURVIVOR_FILTER_NO_BED', '(', 'input_no_bed,', '51,', '10001,', '0.01,', '10', ')', '}', 'workflow', 'test_survivor_filter', '{', 'input_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', 'file(params.test_data[homo_sapiens][genome][genome_bed],', 'checkIfExists:', 'true)', ']', 'SURVIVOR_FILTER_BED', '(', 'input_bed,', '51,', '10001,', '0.01,', '10', ')', '}']
+    ['#!/usr/bin/env', 'nextflow', 'nextflow.enable.dsl', '=', '2', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_NO_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'workflow', 'test_survivor_filter_no_bed', '{', 'input_no_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', '[]', ']', 'SURVIVOR_FILTER_NO_BED', '(', 'input_no_bed,', '51,', '10001,', '0.01,', '10', ')', '}', 'workflow', 'test_survivor_filter', '{', 'input_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', 'file(params.test_data[homo_sapiens][genome][genome_bed],', 'checkIfExists:', 'true)', ']', 'SURVIVOR_FILTER_BED', '(', 'input_bed,', '51,', '10001,', '0.01,', '10', ')', '}']
 
-keywords - cannot assume linestart.
-"include",
-"workflow"
-modname.uppercase()
+    includes have an alternative form - ['include', '{', 'AMPIR', '}', 'from']
+['#!/usr/bin/env', 'nextflow', 'nextflow.enable.dsl', '=', '2', 'include', '{', 'AMPIR', '}', 'from', '../../../../modules/nf-core/ampir/main.nf', 'workflow', 'test_ampir', '{', 'fasta', '=', '[', '[', 'id:test,', 'single_end:false', '],', '//', 'meta', 'map', 'file(params.test_data[candidatus_portiera_aleyrodidarum][genome][proteome_fasta],', 'checkIfExists:', 'true),', ']', 'model', '=', 'precursor', 'min_length', '=', '10', 'min_probability', '=', '0.7', 'AMPIR', '(', 'fasta,', 'model,', 'min_length,', 'min_probability', ')', '}']
 
-includes contain the workflow test names
-workflow { to } has the test file and test name to match up
-Inside the workflow the workflow name signals a section with parameter names to use in order inside parentheses.
+
+    keywords - cannot assume linestart.
+    "include",
+    "workflow"
+    modname.uppercase()
+
+    includes contain the workflow test names
+    workflow { to } has the test file and test name to match up
+    Inside the workflow the workflow name signals a section with parameter names to use in order inside parentheses.
+        """
+        def saveTestToLocalpath(indx=0, w=''):
+            tparam = w[indx]
+            while not w[indx].startswith('file(') and not w[indx] in ["}", "]"]:
+                 indx += 1
+            #  file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
+            if w[indx].startswith('file(param'):
+                testfpath = (
+                    w[indx].split("[", 1)[1]
+                    .split("],")[0]
+                    .replace("][", "/")
+                    .replace("'", "")
+                )  # 'candidatus_portiera_aleyrodidarum/genome/proteome_fasta'
+                print('savetest', w[indx], testfpath)
+                tfilename = testfpath.split('/')[-1].replace('_','.')
+                # so much evil, pointless obfuscation and indirection
+                # because we can.
+                tstart = '/'.join(testfpath.split('/')[:-1])
+                testfpath = os.path.join(tstart, tfilename)
+                # 'candidatus_portiera_aleyrodidarum/genome/proteome.fasta'
+                localpath = testfpath.replace("/", "_")
+                localpath = os.path.join(self.localTestDir, localpath)
+                foundpaths = self.file_dict.get(tfilename, None)
+                print('### testfpath', testfpath, 'localpath =', localpath)
+                if not foundpaths:
+                    print(
+                        "test specifier",
+                        testfpath,
+                        "not found in directory of the test repository. Please run the updater",
+                    )
+                    sys.exit(3)
+                testU = self.testURLprefix + foundpaths[0]
+                cl = ["wget", "-O", localpath, testU]
+                p = subprocess.run(cl)
+                if p.returncode:
+                    print("Got", p.returncode, "from executing", " ".join(cl))
+                    sys.exit(5)
+            else: #'file(https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz,'
+                foundpath = w[indx].replace('file(','').replace(',','').replace(')','')
+                fp2 = foundpath.split('/')[-2:]
+                targetdir = foundpath.split('/')[-2]
+                os.makedirs(os.path.join(self.localTestDir, targetdir), exist_ok = True)
+                fname = '/'.join(fp2)
+                localpath = os.path.join(self.localTestDir, fname)
+                cl = ["wget", "-O", localpath, foundpath]
+                p = subprocess.run(cl)
+                if p.returncode:
+                    print("Got", p.returncode, "from executing", " ".join(cl))
+                    sys.exit(5)
+            return (indx, localpath)
+
+
+
+
+        def parseATest(w, testNames):
             """
-            def parseATest(w):
-                """
-                split into bits - test file, test name, test parameter values for each test
-                """
-                tname = w[0]
-                tparamvalues = {} # indexed by test param name k
-                while i < len(w):
-                    if w[i].startswith(self.args.tool_name).upper(): # is a test command line at end
-                        i += 1
-                        tparamnames = []
-                        while not w[i] == ")" and not w[i] == "}":
-                            tparamnames.append(w[i])
-                            i += 1
-                    i += 1
-                    if w[i+1] == "=": # start of a test parameter
-                        if w[i+2] == "[": # mapping start to
-                            i, v = self.saveTestToLocalpath(w,i)
-                            i += 1
-                        else:
-                            v = w[i+1] # simples
-                            i += 2
-                        tparamtvalues[tparam] = v
-                return {"tname" : tname, "tparamnames":tparamnames, "tparamvalues":tparamvalues}
+            split into bits - test file, test name, test parameter values for each test
+
+from nftoolmaker import ParseNFMod as foo
+bar = '''#!/usr/bin/env nextflow
+
+nextflow.enable.dsl = 2
+
+include { AMPIR } from '../../../../modules/nf-core/ampir/main.nf'
+
+workflow test_ampir {
+
+fasta = [ [ id:'test', single_end:false ], // meta map
+file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
+]
+
+model = "precursor"
+
+min_length = 10
+
+min_probability = "0.7"
+
+AMPIR ( fasta, model, min_length, min_probability )
+}
+'''
+foo.nfParseTests(foo, nftesttext=bar)
+            """
+            tname = w[0]
+            tparamvalues = [] # indexed by test param name k
+            indx = 0
+            lw = len(w)
+            while indx < lw:
+                if w[indx] in testNames: # is a test command line at end
+                    indx += 2
+                    tparamnames = []
+                    while not w[indx] == ")" and not w[indx] == "}":
+                        tparamnames.append(w[indx].replace(',','')) # shlex...
+                        indx += 1
+                elif indx < (lw -1) and w[indx+1] == "=": # start of a test parameter
+                    pname = w[indx].replace(',','') # shlex...
+                    indx += 1
+                    if w[indx+1] == "[": # mapping start to
+                        (indx, v) = saveTestToLocalpath(indx, w)
+                        indx += 1
+                    else:
+                        v = w[indx+1] # simples
+                        indx += 2
+                    tparamvalues.append(v)
+                else:
+                    indx += 1
+            return (tname, tparamnames, tparamvalues)
+
+
 
         kw = ["include", "workflow"]
-        nf = shlex.split(nftest)
-        nftests = []
-        testnames = []
-        testincs = []
-        inwf = False
-        ininc = False
-        ne = len(nf)
-        i = 0
-        while i < ne:
-            e = nf[i]
-            if e == "workflow"): # all to }
+        nfshlex = shlex.split(nftesttext)
+        testNames = []
+        nfwf = []
+        ne = len(nfshlex)
+        indx = 0
+        while indx < ne:
+            e = nfshlex[indx]
+            if e == "workflow": # all to }
                 awf = []
-                while nf[i] != "}":
-                    awf.append(nf[i])
-                    i += 1
-                i += 1
-               nftests.append(awf)
+                indx += 1
+                while nfshlex[indx] != "}":
+                    awf.append(nfshlex[indx])
+                    indx += 1
+                print('### awf', awf)
+                nfwf.append(awf)
             elif e == "include":
-                aninc = []
-                i += 1
-                while nf[i] != "}":
-                    aninc.append(nf[i])
-                    i += 1
-                testincs.append(aninc)
-        for inc in testincs:
-            testincs.append(parseAInc(inc))
-        for w in workflows:
-            nftests.append(parseATest(w,))
-        self.nftests = nftests
+                if nfshlex[indx+3] == '}':  # includes have an alternative form - ['include', '{', 'AMPIR', '}', 'from']
+                    aninc = nfshlex[indx + 2]
+                    indx += 4
+                else:
+                    aninc = nfshlex[indx+4].replace('}', '') # shlex does this
+                    indx += 4
+                testNames.append(aninc)
+            else:
+                indx += 1
+        for w in nfwf:
+            (tname, tparamnames, tparamvalues) = parseATest(w,testNames)
+        self.nfTests.append([tname, tparamnames, tparamvalues])
+        print('parseATest self.nfTests', self.nfTests)
+
 
 
 
     def getTestInfo(self):
         """
-
-
 wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/genomics/prokaryotes/candidatus_portiera_aleyrodidarum/genome/proteome.fasta
-
-
         """
-        testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
         self.setTestFiles()
         if '_' in self.tool_name: # ridiculous hack for multi tool modules
             submod = self.tool_name.replace('_','/') # punt
@@ -266,9 +320,9 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         else:
             testything = "tests/modules/nf-core/%s/main.nf" % self.tool_name
         if os.path.exists(testything):
-            nftest = open(testything, "r").readlines()
-            nftest = [x.strip() for x in nftest]
-            testbits = self.nfParseTests(nftest)
+            nftesttext = open(testything, "r").readlines()
+            self.nfParseTests(' '.join(nftesttext))
+            # produces self.nftests - dict  {"tname" : tname, "tparamnames":tparamnames, "tparamvalues":tparamvalues}
         else:
             nftest = None
             print(
@@ -276,59 +330,9 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
                 testything,
                 "not found",
             )
-        testthings = {"tool_name": self.tool_name}
-        testpaths = {}
-        insect = False
-        k = None
-        v = None
-        testU = None
-        for row in testbits:
-            if row.strip().startswith("]"):
-                insect = False  # ugh. let's pray for obsessive formatting stupid.
-            if insect:
-                if row.startswith(
-                    "file("
-                ):  #  file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
-                    testfpath = (
-                        row.split("[", 1)[1]
-                        .split("],")[0]
-                        .replace("']['", "/")
-                        .replace("'", "")
-                    )  # 'candidatus_portiera_aleyrodidarum/genome/proteome_fasta'
-                    tfilename = testfpath.split('/')[-1].replace('_','.') # punt?
-                    tstart = '/'.join(testfpath.split('/')[:-1])
-                    testfpath = os.path.join(tstart, tfilename)
-                    # 'candidatus_portiera_aleyrodidarum/genome/proteome.fasta'
-                    localpath = testfpath.replace("/", "_")
-                    localpath = os.path.join(self.localTestDir, localpath)
-                    foundpaths = file_dict.get(tfilename, None)
-                    print('### testfpath', testfpath, 'localpath =', localpath)
-                    if len(foundpaths) == 0:
-                        print(
-                            "test specifier",
-                            testfpath,
-                            "not found in directory of the test repository. Please run the updater",
-                        )
-                        sys.exit(3)
-                    testU = testURLprefix + foundpaths[0]
-                    cl = ["wget", "-O", localpath, testU]
-                    p = subprocess.run(cl)
-                    if p.returncode:
-                        print("Got", p.returncode, "from executing", " ".join(cl))
-                        sys.exit(5)
-                    testpaths[k] = localpath
-                    testthings[k].append(localpath)
-            if "=" in row:
-                k = row.split("= ")[0].strip()
-                v = row.split("= ")[1:]
-                testthings[k] = v
-            if "[" in row:
-                insect = True
-        self.testData = testthings
-        self.testPaths = testpaths
-        print("Test values found = ", testthings)
 
-    def makeInfile(self, inpdict, i):
+
+    def makeInfile(self, inpdict, indx):
         """
         {'faa': {'type': 'file', 'description': 'FASTA file containing amino acid sequences', 'pattern': '*.{faa,fasta}'}}
 
@@ -338,8 +342,8 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         pdict = {}
         pid = list(inpdict.keys())[0]
         ppath = pid
-        testid = self.testParamIds[i]
-        ppath = self.testPaths.get(testid, None)
+        [tname, tparamnames, tparamvalues] = self.nfTests[0]
+        ppath = tparamvalues[indx]
         if not ppath:
             ppath = pid
         plabel = inpdict[pid]["description"]
@@ -349,6 +353,7 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
             ppattern = ppattern.replace("faa,", "")
         else:
             ppattern = ppattern.replace("faa", "fasta")
+        self.scriptPrefixSubs[pfmt] = "$%s" % pname # will be substituted in configfile
         print("ppattern", ppattern)
         pdict["CL"] = pid
         pdict["name"] = ppath
@@ -359,7 +364,7 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         self.tfcl.append("--input_files")
         self.tfcl.append(json.dumps(pdict))
 
-    def makeOutfile(self, inpdict, i):
+    def makeOutfile(self, inpdict):
         """
         need  --output_files '{"name": "htmlout", "format": "html", "CL": "", "test": "sim_size:5000", "label": "Plotlytabular $title on $input_tab.element_identifier" , "when": [ "when input=outputimagetype value=small_png format=png" , "when input=outputimagetype value=large_png format=png" ] }'
         """
@@ -383,7 +388,7 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         self.tfcl.append("--output_files")
         self.tfcl.append(json.dumps(pdict))
 
-    def makeString(self, inpdict, i):
+    def makeString(self, inpdict, indx):
         """
         need something like --additional_parameters '{"name": "xcol", "value": "petal_length", "label": "x axis for plot", "help": "Select the input tabular column for the horizontal plot axis", "type": "datacolumn","CL": "xcol","override": "", "repeat": "0", "multiple": "", "dataref": "input_tab"}'
         """
@@ -391,30 +396,29 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         pname = list(inpdict.keys())[0]
         plabel = inpdict[pname]["description"]
         ppattern = inpdict[pname]["pattern"]
-        testid = self.testParamIds[i]
-        print(self.testData[testid])
+        [tname, tparamnames, tparamvalues] = self.nfTests[0]
         if ppattern.startswith("{") and ppattern.endswith("}"):
             # is a select comma separated list
-            self.makeSelect(inpdict, i)
+            self.makeSelect(inpdict)
         else:
             pdict["type"] = "text"
             pdict["CL"] = pname
             pdict["name"] = pname
-            pdict["value"] = self.testData[testid][0]
+            pdict["value"] = tparamvalues[indx]
             pdict["help"] = ""
             pdict["label"] = plabel
             pdict["repeat"] = "0"
             self.tfcl.append("--additional_parameters")
             self.tfcl.append(json.dumps(pdict))
 
-    def makeNum(self, inpdict, i):
+    def makeNum(self, inpdict, indx):
         """
         need something like --additional_parameters '{"name": "xcol", "value": "petal_length", "label": "x axis for plot", "help": "Select the input tabular column for the horizontal plot axis", "type": "datacolumn","CL": "xcol","override": "", "repeat": "0", "multiple": "", "dataref": "input_tab"}'
         """
         pdict = {}
+        print('num i=', indx)
         pname = list(inpdict.keys())[0]
-        testid = self.testParamIds[i]
-        print(self.testData[testid])
+        [tname, tparamnames, tparamvalues] = self.nfTests[0]
         plabel = inpdict[pname]["description"]
         ppattern = inpdict[pname]["pattern"]
         ptype = inpdict[pname]["type"]
@@ -424,14 +428,14 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
             pdict["type"] = "integer"
         pdict["CL"] = pname
         pdict["name"] = pname
-        pdict["value"] = self.testData[testid][0].replace('"', "")
+        pdict["value"] = tparamvalues[indx].replace('"', "")
         pdict["help"] = ""
         pdict["label"] = plabel
         pdict["repeat"] = "0"
         self.tfcl.append("--additional_parameters")
         self.tfcl.append(json.dumps(pdict))
 
-    def makeSelect(self, inpdict, i):
+    def makeSelect(self, inpdict):
         """--selecttext_parameters '{"name":"outputimagetype", "label":"Select the output format for this plot image. If over 5000 rows of data, HTML breaks browsers, so your job will fail. Use png only if more than 5k rows.", "help":"Small and large png are not interactive but best for many (+10k) points. Stand-alone HTML includes 3MB of javascript. Short form HTML gets it the usual way so can be cut and paste into documents.", "type":"selecttext","CL":"image_type","override":"","value": [ "short_html" , "long_html" , "large_png" , "small_png" ], "texts": [ "Short HTML interactive format" ,  "Long HTML for stand-alone viewing where network access to libraries is not available." ,  "Large (1920x1200) png image - not interactive so hover column ignored" ,  "small (1024x768) png image - not interactive so hover column ignored"  ] }
         "{precursor,mature}" is a ppattern
         """
@@ -555,113 +559,115 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         lstart = [x.lstrip() for x in self.nftext if x.lstrip().startswith(flag)]
         return lstart
 
+if __name__ == "__main__":
 
-def prepargs(clist):
+    def prepargs(clist):
+        parser = argparse.ArgumentParser()
+        a = parser.add_argument
+        a("--nftest", action="store_true", default=False)
+        a("--script_path", default=None)
+        a("--sysexe", default=None)
+        a("--packages", default=None)
+        a("--tool_name", default="newtool")
+        a("--input_files", default=[], action="append")
+        a("--output_files", default=[], action="append")
+        a("--user_email", default="Unknown")
+        a("--bad_user", default=None)
+        a("--help_text", default=None)
+        a("--tool_desc", default=None)
+        a("--tool_dir", default=None)
+        a("--tool_version", default="0.01")
+        a("--citations", default=None)
+        a("--cl_suffix", default=None)
+        a("--cl_prefix", default=None)
+        a("--cl_override", default=None)
+        a("--test_override", default=None)
+        a("--additional_parameters", action="append", default=[])
+        a("--selecttext_parameters", action="append", default=[])
+        a("--selectflag_parameters", action="append", default=[])
+        a("--edit_additional_parameters", action="store_true", default=False)
+        a("--parampass", default="positional")
+        a("--tfcollection", default="toolgen")
+        a("--galaxy_root", default="/galaxy-central")
+        a("--collection", action="append", default=[])
+        a("--include_tests", default=False, action="store_true")
+        a("--install_flag", action="store_true", default=False)
+        a("--admin_only", default=True, action="store_true")
+        a("--tested_tool_out", default=None)
+        a("--tool_conf_path", default="config/tool_conf.xml")  # relative to $__root_dir__
+        a(
+            "--xtra_files",
+            default=[],
+            action="append",
+        )  # history data items to add to the tool base directory
+        args = parser.parse_args(clist)
+        return args
+
+
     parser = argparse.ArgumentParser()
     a = parser.add_argument
-    a("--nftest", action="store_true", default=False)
-    a("--script_path", default=None)
-    a("--sysexe", default=None)
-    a("--packages", default=None)
-    a("--tool_name", default="newtool")
-    a("--input_files", default=[], action="append")
-    a("--output_files", default=[], action="append")
-    a("--user_email", default="Unknown")
-    a("--bad_user", default=None)
-    a("--help_text", default=None)
-    a("--tool_desc", default=None)
-    a("--tool_dir", default=None)
-    a("--tool_version", default="0.01")
-    a("--citations", default=None)
-    a("--cl_suffix", default=None)
-    a("--cl_prefix", default=None)
-    a("--cl_override", default=None)
-    a("--test_override", default=None)
-    a("--additional_parameters", action="append", default=[])
-    a("--selecttext_parameters", action="append", default=[])
-    a("--selectflag_parameters", action="append", default=[])
-    a("--edit_additional_parameters", action="store_true", default=False)
-    a("--parampass", default="positional")
-    a("--tfcollection", default="toolgen")
-    a("--galaxy_root", default="/galaxy-central")
-    a("--collection", action="append", default=[])
-    a("--include_tests", default=False, action="store_true")
-    a("--install_flag", action="store_true", default=False)
-    a("--admin_only", default=True, action="store_true")
-    a("--tested_tool_out", default=None)
-    a("--tool_conf_path", default="config/tool_conf.xml")  # relative to $__root_dir__
-    a(
-        "--xtra_files",
-        default=[],
-        action="append",
-    )  # history data items to add to the tool base directory
-    args = parser.parse_args(clist)
-    return args
-
-
-parser = argparse.ArgumentParser()
-a = parser.add_argument
-a("--nftext", required=True)
-a("--nfyml", required=True)
-# tf collection name is always toolgen
-a("--collpath", default="toolgen")
-a("--toolgz", required=True)
-a("--tool_dir", required=True)
-args = parser.parse_args()
-nft = open(args.nftext, "r").readlines()
-nfy = open(args.nfyml, "r")
-nfym = yaml.safe_load(nfy)
-cl = ["touch", "local_tool_conf.xml"]
-subprocess.run(cl)
-nfmod = ParseNFMod(nft, nfym, args)
-cl = nfmod.tfcl
-print("cl=", "\n".join(cl))
-args = prepargs(cl)
-assert (
-    args.tool_name
-), "## This ToolFactory cannot build a tool without a tool name. Please supply one."
-logfilename = os.path.join(
-    args.tfcollection, "ToolFactory_make_%s_log.txt" % args.tool_name
-)
-if not os.path.exists(args.tfcollection):
-    os.mkdir(args.tfcollection)
-logger.setLevel(logging.INFO)
-fh = logging.FileHandler(logfilename, mode="w")
-fformatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-fh.setFormatter(fformatter)
-logger.addHandler(fh)
-tf = Tool_Factory(args)
-tf.makeTool()
-tf.writeShedyml()
-tf.update_toolconf()
-time.sleep(5)
-if tf.condaenv and len(tf.condaenv) > 0:
-    tf.install_deps()
-    logger.debug("Toolfactory installed deps. Calling fast test")
-time.sleep(2)
-# testret = tf.fast_local_test()
-testret = tf.planemo_local_test()
-logger.debug("Toolfactory finished test")
-if int(testret) > 0:
-    logger.error("ToolFactory tool build and test failed. :(")
-    logger.info(
-        "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
+    a("--nftext", required=True)
+    a("--nfyml", required=True)
+    # tf collection name is always toolgen
+    a("--collpath", default="toolgen")
+    a("--toolgz", required=True)
+    a("--tool_dir", required=True)
+    args = parser.parse_args()
+    nft = open(args.nftext, "r").readlines()
+    nfy = open(args.nfyml, "r")
+    nfym = yaml.safe_load(nfy)
+    print('nfym = ', nfym)
+    cl = ["touch", "local_tool_conf.xml"]
+    subprocess.run(cl)
+    nfmod = ParseNFMod(nft, nfym, args)
+    cl = nfmod.tfcl
+    print("cl=", "\n".join(cl))
+    args = prepargs(cl)
+    assert (
+        args.tool_name
+    ), "## This ToolFactory cannot build a tool without a tool name. Please supply one."
+    logfilename = os.path.join(
+        args.tfcollection, "ToolFactory_make_%s_log.txt" % args.tool_name
     )
-    logger.info("when tested with galaxy_tool_test.  Error code:%d" % testret, ".")
-    logger.info(
-        "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
-    )
-    logger.info(
-        "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
-    )
-    logger.info(
-        "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
-    )
-    logger.info(
-        "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
-    )
+    if not os.path.exists(args.tfcollection):
+        os.mkdir(args.tfcollection)
+    logger.setLevel(logging.INFO)
+    fh = logging.FileHandler(logfilename, mode="w")
+    fformatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    fh.setFormatter(fformatter)
+    logger.addHandler(fh)
+    tf = Tool_Factory(args)
+    tf.makeTool()
+    tf.writeShedyml()
+    tf.update_toolconf()
+    time.sleep(5)
+    if tf.condaenv and len(tf.condaenv) > 0:
+        tf.install_deps()
+        logger.debug("Toolfactory installed deps. Calling fast test")
+    time.sleep(2)
+    # testret = tf.fast_local_test()
+    testret = tf.planemo_local_test()
+    logger.debug("Toolfactory finished test")
+    if int(testret) > 0:
+        logger.error("ToolFactory tool build and test failed. :(")
+        logger.info(
+            "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
+        )
+        logger.info("when tested with galaxy_tool_test.  Error code:%d" % testret, ".")
+        logger.info(
+            "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
+        )
+        logger.info(
+            "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
+        )
+        logger.info(
+            "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
+        )
+        logger.info(
+            "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
+        )
+        logging.shutdown()
+        sys.exit(5)
+    else:
+        tf.makeToolTar(testret)
     logging.shutdown()
-    sys.exit(5)
-else:
-    tf.makeToolTar(testret)
-logging.shutdown()
