@@ -7,6 +7,24 @@ Trying to make a tool that will download and parse a github nf-core module repos
 The repository https://github.com/nf-core/modules/tree/master/modules/nf-core has lots of modules, described in paired files - meta.yml and main.nf. They could potentially be auto-converted into Galaxy tools by constructing a suitable command line for the ToolFactory script.
 
 ### Progress to date.
+
+August 21
+
+Using shlex helps tokenise the nfcore scripts - not perfect so lots of fudges with .replace
+Someone can do it right once it's working right.
+parsing the tests and the other stuff but formats are a real challenge.
+nf-core has it's own vocabulary. One solution would be to add them to Galaxy's datatypes.
+Another would be to map output parameter names in the script and override with galaxy extensions for each datatype. That needs a mapping.
+
+a grep for the idiom ${prefix} in the entire nf-core module text corpus was converted into the following list of extensions they seem to have.
+Some are bogus but the short ones might be genuine. Problem is that formats need to match Galaxy's expectations.
+
+nftypes = [ 'BedGraph', 'CollectMultipleMetrics', 'IS', 'IS_compare', 'IS_compare/output', 'R', 'abacas', 'afa', 'agp', 'alignment_summary_metrics', 'all', 'alleleCount', 'aln', 'asm', 'assembly_summary', 'back_chain', 'bai', 'ballgown', 'bam', 'base_distribution_by_cycle_metrics', 'bcf', 'bcf"', 'bed', 'bed"', 'bedGraph', 'bedGraph"', 'bedgraph"', 'bedpe', 'bg', 'bigBed', 'bigWig', 'bin', 'biom', 'bw', 'clustered', 'clw"', 'cnn', 'cns', 'cool', 'coords', 'count', 'coverage_metrics', 'cpn', 'crai', 'cram', 'csi', 'csi"', 'csv', 'csv"', 'cutoffs', 'd4', 'db', 'dbtype', 'delta', 'dict', 'dnd', 'domtbl"', 'embl', 'fa', 'fa;', 'faa', 'fas', 'fasta', 'fastq', 'fastq"', 'ffn', 'flagstat', 'fmask-all"', 'fmask-rf"', 'fna', 'fsa', 'gbff', 'gbk', 'gem', 'genepred', 'gfa', 'gff', 'gff3', 'gmask-all"', 'gmask-rf"', 'gtf', 'gtf"', 'gz', 'gz"', 'gz":', 'gz;', 'hdf5', 'hist', 'hmm', 'html', 'html"', 'ibf', 'idx', 'idxstats', 'igv":', 'index', 'insert_size_metrics', 'interval_list', 'interval_list"', 'intervals', 'json', 'junction', 'lca', 'list', 'loci', 'log', 'lookup', 'maf', 'mappability', 'mash_stats', 'mate1', 'mate2', 'mcool', 'megan"', 'meryldb', 'metrics', 'mpileup', 'mpileup"', 'msf"', 'narrowPeak', 'npz', 'og', 'out', 'paf', 'paf"', 'par', 'pdf', 'ped', 'phyi"', 'phyloFlash', 'phys"', 'pmask-all"', 'pmask-rf"', 'png', 'png"', 'pretext', 'profile', 'pytor', 'quality_by_cycle_metrics', 'quality_distribution_metrics', 'recal', 'recall":', 'refflat', 'refmap', 'report', 'rna_metrics', 'roh', 'sai', 'sam', 'score', 'screen', 'sdf', 'seg', 'simplified', 'sizes', 'snf', 'somalier', 'source', 'stat', 'stats', 'sthlm', 'sto"', 'summary', 'svg', 'tab', 'table', 'table"', 'table":', 'tax', 'tbi', 'tbi"', 'tbl', 'tbl"', 'tif', 'tiff', 'tiling', 'tmap', 'tracking', 'tranches', 'tre', 'tree"', 'tsv', 'tsv"', 'txt', 'txt"', 'txt":', 'unc', 'vcf', 'vcf"', 'version', 'vg', 'vgi"', 'wig', 'wig"', 'xg', 'xml', 'zip', ]
+
+Now have a working hmmer_align xml and test data as a result of manual editing.
+Need to make the generator use the right parameter names - it's tricky because fiddling the nf-core script text is a bit of a fool's errand - the whole project is really.
+
+
 August 20
 
 The ToolFactory is now imported as a class and given the command line as an argparse args object so it works just fine.
