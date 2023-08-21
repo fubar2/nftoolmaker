@@ -219,36 +219,9 @@ class ParseNFMod:
                     sys.exit(5)
             return (indx, localpath)
 
-
-
-
         def parseATest(w, testNames):
             """
             split into bits - test file, test name, test parameter values for each test
-
-from nftoolmaker import ParseNFMod as foo
-bar = '''#!/usr/bin/env nextflow
-
-nextflow.enable.dsl = 2
-
-include { AMPIR } from '../../../../modules/nf-core/ampir/main.nf'
-
-workflow test_ampir {
-
-fasta = [ [ id:'test', single_end:false ], // meta map
-file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
-]
-
-model = "precursor"
-
-min_length = 10
-
-min_probability = "0.7"
-
-AMPIR ( fasta, model, min_length, min_probability )
-}
-'''
-foo.nfParseTests(foo, nftesttext=bar)
             """
             tname = w[0]
             tparamvalues = [] # indexed by test param name k
@@ -274,8 +247,6 @@ foo.nfParseTests(foo, nftesttext=bar)
                 else:
                     indx += 1
             return (tname, tparamnames, tparamvalues)
-
-
 
         kw = ["include", "workflow"]
         nfshlex = shlex.split(nftesttext)
@@ -311,8 +282,7 @@ foo.nfParseTests(foo, nftesttext=bar)
 
 
     def getTestInfo(self):
-        """
-wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/genomics/prokaryotes/candidatus_portiera_aleyrodidarum/genome/proteome.fasta
+        """ read
         """
         self.setTestFiles()
         if '_' in self.tool_name: # ridiculous hack for multi tool modules
@@ -321,8 +291,8 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         else:
             testything = "tests/modules/nf-core/%s/main.nf" % self.tool_name
         if os.path.exists(testything):
-            nftesttext = open(testything, "r").readlines()
-            self.nfParseTests(' '.join(nftesttext))
+            nftesttext = open(testything, "r").read()
+            self.nfParseTests(nftesttext)
             # produces self.nftests - dict  {"tname" : tname, "tparamnames":tparamnames, "tparamvalues":tparamvalues}
         else:
             nftest = None
