@@ -64,12 +64,11 @@ class ParseNFMod:
         self.setTestFiles()
         self.makeCLCoda()
         self.tfcl = ["--parampass", "embednfmod"]
-        self.tool_name = nfy["name"]
+        self.tool_name = nfy["name"].replace("'",'')
         self.getTestInfo()
         self.makeMeta()
         stub = self.getsection("stub:")  # not all have these - no idea what they're for
         indx = 0
-        print('### nfy',nfy)
         for inpdict in nfy["input"]:
             pname = list(inpdict.keys())[0]
             ptype = inpdict[pname]["type"]
@@ -103,7 +102,8 @@ class ParseNFMod:
     def makeCLCoda(self):
         """need a json representation of the tail for the command line
         setting the --nftest flag prevents planemo test and install on the local toolfactory
-        """
+        tested a collection
+
         coldict = {
             "name": args.collpath,
             "kind": "list",
@@ -111,8 +111,10 @@ class ParseNFMod:
             "label": "nfcore module spawn",
         }
         coll = json.dumps(coldict)
-        clend = """--collection
-%s
+        --collection %s
+        """
+
+        clend = """
 --tested_tool_out
 %s
 --tfcollection
@@ -122,12 +124,11 @@ class ParseNFMod:
 --tool_dir
 %s
  """ % (
-            coll,
+            #coll,
             args.toolgz,
             args.collpath,
             args.tool_dir,
         )
-        print("clend", clend)
         self.cl_coda = clend.split("\n")
 
     def setTestFiles(self):
@@ -166,6 +167,9 @@ class ParseNFMod:
     includes contain the workflow test names
     workflow { to } has the test file and test name to match up
     Inside the workflow the workflow name signals a section with parameter names to use in order inside parentheses.
+
+    TODO make sure localpath is test-data and matches the test parameter name
+
         """
         def saveTestToLocalpath(indx=0, w=''):
             tparam = w[indx]
@@ -179,7 +183,6 @@ class ParseNFMod:
                     .replace("][", "/")
                     .replace("'", "")
                 )  # 'candidatus_portiera_aleyrodidarum/genome/proteome_fasta'
-                print('savetest', w[indx], testfpath)
                 tfilename = testfpath.split('/')[-1].replace('_','.')
                 # so much evil, pointless obfuscation and indirection
                 # because we can.
@@ -189,7 +192,6 @@ class ParseNFMod:
                 localpath = testfpath.replace("/", "_")
                 localpath = os.path.join(self.localTestDir, localpath)
                 foundpaths = self.file_dict.get(tfilename, None)
-                print('### testfpath', testfpath, 'localpath =', localpath)
                 if not foundpaths:
                     print(
                         "test specifier",
@@ -289,7 +291,6 @@ foo.nfParseTests(foo, nftesttext=bar)
                 while nfshlex[indx] != "}":
                     awf.append(nfshlex[indx])
                     indx += 1
-                print('### awf', awf)
                 nfwf.append(awf)
             elif e == "include":
                 if nfshlex[indx+3] == '}':  # includes have an alternative form - ['include', '{', 'AMPIR', '}', 'from']
@@ -304,7 +305,7 @@ foo.nfParseTests(foo, nftesttext=bar)
         for w in nfwf:
             (tname, tparamnames, tparamvalues) = parseATest(w,testNames)
         self.nfTests.append([tname, tparamnames, tparamvalues])
-        print('parseATest self.nfTests', self.nfTests)
+
 
 
 
@@ -353,8 +354,14 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
             ppattern = ppattern.replace("faa,", "")
         else:
             ppattern = ppattern.replace("faa", "fasta")
-        self.scriptPrefixSubs[pfmt] = "$%s" % pname # will be substituted in configfile
-        print("ppattern", ppattern)
+        pps = ppattern.split(',')
+        if len(pps) > 1:
+            pps = pps[0]
+        else:
+            pps = ppattern
+        if pps == 'faa':
+            pps = 'fasta' # hack to get rid of nfcore datatype
+        self.scriptPrefixSubs[pps] = "$%s" % pid # will be substituted in configfile
         pdict["CL"] = pid
         pdict["name"] = ppath
         pdict["format"] = ppattern
@@ -367,6 +374,8 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
     def makeOutfile(self, inpdict):
         """
         need  --output_files '{"name": "htmlout", "format": "html", "CL": "", "test": "sim_size:5000", "label": "Plotlytabular $title on $input_tab.element_identifier" , "when": [ "when input=outputimagetype value=small_png format=png" , "when input=outputimagetype value=large_png format=png" ] }'
+
+        TODO: make a format lookup table or otherwise map all the dozens of extensions
         """
         pdict = {}
         pname = list(inpdict.keys())[0]
@@ -378,7 +387,7 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         if len(ppattern.split(",")) > 0:
             pfmt = ppattern.split(",")[0]
         self.scriptPrefixSubs[pfmt] = "$%s" % pname # will be substituted in configfile
-        pfmt = pfmt.replace('faa', 'fasta') # kludge so Galaxy doesn't get confused.
+        pfmt = pfmt.replace('faa', 'fasta').replace("sthlmgz","stockholm") # kludge so Galaxy doesn't get confused.
         pdict["CL"] = pname
         pdict["name"] = pname
         pdict["format"] = pfmt
@@ -416,7 +425,6 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         need something like --additional_parameters '{"name": "xcol", "value": "petal_length", "label": "x axis for plot", "help": "Select the input tabular column for the horizontal plot axis", "type": "datacolumn","CL": "xcol","override": "", "repeat": "0", "multiple": "", "dataref": "input_tab"}'
         """
         pdict = {}
-        print('num i=', indx)
         pname = list(inpdict.keys())[0]
         [tname, tparamnames, tparamvalues] = self.nfTests[0]
         plabel = inpdict[pname]["description"]
@@ -462,9 +470,9 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         --tool_name and so on from yaml
         """
         self.tfcl.append("--tool_name")
-        self.tfcl.append("'%s'" % self.tool_name)
+        self.tfcl.append(self.tool_name)
         self.tfcl.append("--user_email")
-        self.tfcl.append("'toolfactory@galaxy.org'")
+        self.tfcl.append("toolfactory@galaxy.org")
         # self.tfcl.append("--citations %s") TODO fix toolfactory citation handling - currently ignored :(
         nft = self.nfyaml["tools"][0]
         t = nft[list(nft.keys())[0]]
@@ -478,9 +486,9 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         self.tfcl.append("--help_text")
         self.tfcl.append(self.helpPath)
         self.tfcl.append("--tool_desc")
-        self.tfcl.append("'%s'" % t["description"])
+        self.tfcl.append(t["description"])
         self.tfcl.append("--tool_version")
-        self.tfcl.append("'0.01'")
+        self.tfcl.append("0.01")
         self.tfcl.append("--edit_additional_parameters")
 
     def makePackages(self, cs):
@@ -503,6 +511,9 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
         to convert all the ${prefix}.xxx into something more helpful - like real output names
         Only clue is from the yaml - where pattern gives the extension: "*.{faa}" or "*.tsv'
         so use that extension to change the script - substitute any ${prefix}.foo with $inputfoo
+
+        TODO: substitute right parameter names
+
         """
         sexe = None
         s = scrip.split('"""')[1]
@@ -519,7 +530,8 @@ wget https://raw.githubusercontent.com/nf-core/test-datasets/updates_names/data/
             if sexe == "Rscript":
                 s = s.replace("<-", "=")
                 ss = s.split('\n')
-        print("### s=", ss)
+        else:
+            sexe = 'sh' # assume is a bash script?
         scriptf, self.scriptPath = tempfile.mkstemp(
             suffix=".script", prefix="nftoolmaker", dir=None, text=True
         )
@@ -616,7 +628,6 @@ if __name__ == "__main__":
     nft = open(args.nftext, "r").readlines()
     nfy = open(args.nfyml, "r")
     nfym = yaml.safe_load(nfy)
-    print('nfym = ', nfym)
     cl = ["touch", "local_tool_conf.xml"]
     subprocess.run(cl)
     nfmod = ParseNFMod(nft, nfym, args)
