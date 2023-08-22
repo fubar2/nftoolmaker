@@ -1,0 +1,66 @@
+<tool name="hmmer_hmmalign" id="hmmer_hmmalign" version="0.01">
+  <!--Source in git at: https://github.com/fubar2/galaxy_tf_overlay-->
+  <!--Created by toolfactory@galaxy.org at 22/08/2023 22:28:05 using the Galaxy Tool Factory.-->
+  <description>Biosequence analysis using profile hidden Markov models</description>
+  <requirements>
+    <requirement version="3.3.2" type="package">hmmer</requirement>
+  </requirements>
+  <stdio>
+    <exit_code range="1:" level="fatal"/>
+  </stdio>
+  <version_command><![CDATA[echo "0.01"]]></version_command>
+  <command><![CDATA[#set prefix = "hmmer_hmmalign"
+#set task_process = "hmmer_hmmalign"
+bash $runme]]></command>
+  <configfiles>
+    <configfile name="runme"><![CDATA[#set prefix = "hmmer_hmmalign"
+#set task_process = "hmmer_hmmalign"
+### full disclosure! nf-core $args has been removed by nftoolmaker.py
+### full disclosure! | gzip -c removed by nftoolmaker.py
+hmmalign \
+$hmm \
+$fasta > $sthlm
+cat <<-END_VERSIONS > versions.yml
+"${task_process}":
+hmmer: \$(hmmalign -h | grep -o '^# HMMER [0-9.]*' | sed 's/^# HMMER *//')
+END_VERSIONS]]></configfile>
+  </configfiles>
+  <inputs>
+    <param name="fasta" type="data" optional="false" label="Amino acid or nucleotide gzipped compressed fasta file" help="" format="fasta" multiple="false"/>
+    <param name="hmm" type="data" optional="false" label="A gzipped HMM file" help="" format="hmm3" multiple="false"/>
+  </inputs>
+  <outputs>
+    <data name="sthlm" format="stockholm" label="Multiple alignment in gzipped Stockholm format" hidden="false"/>
+  </outputs>
+  <tests>
+    <test>
+      <output name="sthlm" value="sthlm_sample" compare="sim_size" delta="1000"/>
+      <param name="fasta" value="fasta_sample"/>
+      <param name="hmm" value="hmm_sample"/>
+    </test>
+  </tests>
+  <help><![CDATA[description: Biosequence analysis using profile hidden Markov models
+
+
+
+homepage: http://hmmer.org/
+
+
+
+documentation: http://hmmer.org/documentation.html
+
+
+
+doi: 10.1371/journal.pcbi.1002195
+
+
+
+licence: ['BSD-3-Clause']
+
+
+]]></help>
+  <citations>
+    <citation type="doi">10.1093/bioinformatics/bts573</citation>
+  </citations>
+</tool>
+

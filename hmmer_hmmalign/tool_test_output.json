@@ -1,0 +1,82 @@
+{
+    "summary": {
+        "num_errors": 0,
+        "num_failures": 0,
+        "num_skips": 0,
+        "num_tests": 1
+    },
+    "tests": [
+        {
+            "data": {
+                "inputs": {
+                    "fasta": {
+                        "id": "2e1f1c3c605af0ba",
+                        "src": "hda"
+                    },
+                    "hmm": {
+                        "id": "7ef6d0ba160cd6ad",
+                        "src": "hda"
+                    }
+                },
+                "job": {
+                    "command_line": "bash /tmp/tmp_d_4lvdz/job_working_directory/000/3/configs/tmpr8347yqi",
+                    "command_version": "0.01",
+                    "create_time": "2023-08-21T23:38:51.831503",
+                    "dependencies": [],
+                    "exit_code": 0,
+                    "external_id": "1446381",
+                    "galaxy_version": "23.0",
+                    "history_id": "2e1f1c3c605af0ba",
+                    "id": "2cdae4467a26ec58",
+                    "inputs": {
+                        "fasta": {
+                            "id": "2e1f1c3c605af0ba",
+                            "src": "hda",
+                            "uuid": "37272469-8a29-4be5-9814-1811d960fb82"
+                        },
+                        "hmm": {
+                            "id": "7ef6d0ba160cd6ad",
+                            "src": "hda",
+                            "uuid": "8bf5d0cd-ffcc-4170-ac54-1d107bcd84a7"
+                        }
+                    },
+                    "job_messages": [],
+                    "job_metrics": [],
+                    "job_stderr": "",
+                    "job_stdout": "",
+                    "model_class": "Job",
+                    "output_collections": {},
+                    "outputs": {
+                        "sthlm": {
+                            "id": "2cdae4467a26ec58",
+                            "src": "hda",
+                            "uuid": "39c9be97-03c2-4bfc-becd-ac1c3e40eb9a"
+                        }
+                    },
+                    "params": {
+                        "__input_ext": "\"fasta\"",
+                        "chromInfo": "\"/home/ross/galaxy-release_21.01/tool-data/shared/ucsc/chrom/?.len\"",
+                        "dbkey": "\"?\""
+                    },
+                    "state": "ok",
+                    "stderr": "",
+                    "stdout": "",
+                    "tool_id": "hmmer_hmmalign",
+                    "tool_stderr": "",
+                    "tool_stdout": "",
+                    "traceback": null,
+                    "update_time": "2023-08-21T23:38:56.932206",
+                    "user_email": "planemo@galaxyproject.org"
+                },
+                "status": "success",
+                "test_index": 0,
+                "time_seconds": 15.024516344070435,
+                "tool_id": "hmmer_hmmalign",
+                "tool_version": "0.01"
+            },
+            "has_data": true,
+            "id": "hmmer_hmmalign-0"
+        }
+    ],
+    "version": "0.1"
+}

@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 """
 
 """
-FILTERCHARS = "[]{}*.'"
+FILTERCHARS = "[]{}'"
 
 
 class ParseNFMod:
@@ -54,6 +54,12 @@ class ParseNFMod:
 
     def __init__(self, nft, nfy, args):
         self.testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
+        self.cl_coda = ["--tested_tool_out", args.toolgz, "--galaxy_root", "LAZ", "--tool_dir", args.tool_dir, "--tfcollection", args.collpath]
+        self.tool_name = nfy["name"].replace("'",'').lower()
+        self.tool_dir = os.path.join(args.tool_dir, self.tool_name)
+        self.tooltest_dir = os.path.join(self.tool_dir, 'test-data') # for test input files to go
+        os.makedirs(self.tool_dir, exist_ok=True)
+        os.makedirs(self.tooltest_dir, exist_ok=True)
         self.scriptPrefixSubs = {}
         self.nfTests = [] # will ignore multiples but collect all
         self.nftext = nft
@@ -62,20 +68,36 @@ class ParseNFMod:
         self.localTestDir = os.path.join(args.tool_dir, "nfmodtestfiles")
         self.localTestFile = os.path.join(args.tool_dir, "nfgenomicstestdata.txt")
         self.setTestFiles()
-        self.makeCLCoda()
         self.tfcl = ["--parampass", "embednfmod"]
-        self.tool_name = nfy["name"].replace("'",'')
+        self.inparamnames = []
+        self.outparamnames = []
+        for indx, inpdict in enumerate(nfy["input"]): # need these for tests
+            # the test names can be different. Go figure.
+            pname = list(inpdict.keys())[0]
+            ptype = inpdict[pname]["type"]
+            if ptype != "map":
+                self.inparamnames.append(pname)
+        self.inparamcount = len(self.inparamnames) # needed to select a test using them all - bugger anything else - too hard to match up names
         self.getTestInfo()
+        self.usetest = self.nfTests[0]
+        for i, t in enumerate(self.nfTests): # self.nfTests.append([tname, tparamnames, tparamvalues])
+            if len(t[1]) == self.inparamcount:
+                self.usetest = t
+                break
         self.makeMeta()
         stub = self.getsection("stub:")  # not all have these - no idea what they're for
         indx = 0
-        for inpdict in nfy["input"]:
+        for indx, inpdict in enumerate(nfy["input"]):
             pname = list(inpdict.keys())[0]
             ptype = inpdict[pname]["type"]
             if ptype == "map":
                 print("Ignoring map specified as input %s" % str(inpdict))
             elif ptype == "file":
-                self.makeInfile(inpdict,indx)
+                (tname, tparamnames, tparamvalues) = self.usetest
+                print('############ tests=',self.usetest, 'i', indx, 'inpdict', inpdict, 'inparamnames', self.inparamnames)
+                realindex =  self.inparamnames.index(pname)
+                localfile = tparamvalues[realindex] # we hope...
+                self.makeInfile(inpdict,indx, localfile)
                 indx += 1
             elif ptype == "string":
                 self.makeString(inpdict, indx)
@@ -99,37 +121,8 @@ class ParseNFMod:
         self.tfcl += self.cl_coda
         self.tfcl = [x for x in self.tfcl if x.strip() > ""]
 
-    def makeCLCoda(self):
-        """need a json representation of the tail for the command line
-        setting the --nftest flag prevents planemo test and install on the local toolfactory
-        tested a collection
 
-        coldict = {
-            "name": args.collpath,
-            "kind": "list",
-            "discover": "__name_and_ext__",
-            "label": "nfcore module spawn",
-        }
-        coll = json.dumps(coldict)
-        --collection %s
-        """
 
-        clend = """
---tested_tool_out
-%s
---tfcollection
-%s
---galaxy_root
-"$__root_dir__"
---tool_dir
-%s
- """ % (
-            #coll,
-            args.toolgz,
-            args.collpath,
-            args.tool_dir,
-        )
-        self.cl_coda = clend.split("\n")
 
     def setTestFiles(self):
         td = open(self.localTestFile, "r").readlines()
@@ -171,7 +164,7 @@ class ParseNFMod:
     TODO make sure localpath is test-data and matches the test parameter name
 
         """
-        def saveTestToLocalpath(indx=0, w=''):
+        def getTestdataPath(indx, w):
             tparam = w[indx]
             while not w[indx].startswith('file(') and not w[indx] in ["}", "]"]:
                  indx += 1
@@ -179,7 +172,7 @@ class ParseNFMod:
             if w[indx].startswith('file(param'):
                 testfpath = (
                     w[indx].split("[", 1)[1]
-                    .split("],")[0]
+                    .split(",")[0]
                     .replace("][", "/")
                     .replace("'", "")
                 )  # 'candidatus_portiera_aleyrodidarum/genome/proteome_fasta'
@@ -189,8 +182,6 @@ class ParseNFMod:
                 tstart = '/'.join(testfpath.split('/')[:-1])
                 testfpath = os.path.join(tstart, tfilename)
                 # 'candidatus_portiera_aleyrodidarum/genome/proteome.fasta'
-                localpath = testfpath.replace("/", "_")
-                localpath = os.path.join(self.localTestDir, localpath)
                 foundpaths = self.file_dict.get(tfilename, None)
                 if not foundpaths:
                     print(
@@ -199,25 +190,10 @@ class ParseNFMod:
                         "not found in directory of the test repository. Please run the updater",
                     )
                     sys.exit(3)
-                testU = self.testURLprefix + foundpaths[0]
-                cl = ["wget", "-O", localpath, testU]
-                p = subprocess.run(cl)
-                if p.returncode:
-                    print("Got", p.returncode, "from executing", " ".join(cl))
-                    sys.exit(5)
+                foundpath = self.testURLprefix + foundpaths[0]
             else: #'file(https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz,'
                 foundpath = w[indx].replace('file(','').replace(',','').replace(')','')
-                fp2 = foundpath.split('/')[-2:]
-                targetdir = foundpath.split('/')[-2]
-                os.makedirs(os.path.join(self.localTestDir, targetdir), exist_ok = True)
-                fname = '/'.join(fp2)
-                localpath = os.path.join(self.localTestDir, fname)
-                cl = ["wget", "-O", localpath, foundpath]
-                p = subprocess.run(cl)
-                if p.returncode:
-                    print("Got", p.returncode, "from executing", " ".join(cl))
-                    sys.exit(5)
-            return (indx, localpath)
+            return (indx, foundpath)
 
         def parseATest(w, testNames):
             """
@@ -238,10 +214,12 @@ class ParseNFMod:
                     pname = w[indx].replace(',','') # shlex...
                     indx += 1
                     if w[indx+1] == "[": # mapping start to
-                        (indx, v) = saveTestToLocalpath(indx, w)
+                        (indx, v) = getTestdataPath(indx, w)
                         indx += 1
                     else:
-                        v = w[indx+1] # simples
+                        v = w[indx+1].strip() # simples
+                        if v.startswith('file('):
+                            v = v.replace('file(','').replace(')','')
                         indx += 2
                     tparamvalues.append(v)
                 else:
@@ -277,12 +255,8 @@ class ParseNFMod:
             (tname, tparamnames, tparamvalues) = parseATest(w,testNames)
         self.nfTests.append([tname, tparamnames, tparamvalues])
 
-
-
-
-
     def getTestInfo(self):
-        """ read
+        """ read tests and parse
         """
         self.setTestFiles()
         if '_' in self.tool_name: # ridiculous hack for multi tool modules
@@ -302,44 +276,87 @@ class ParseNFMod:
                 "not found",
             )
 
+    def fixParamFormat(self,pfmt):
+        """
+this is a nasty rabbit hole with a fugly kludge
+Need a lookup table for all the possibilities
+can be a comma sep list but need to be Galaxy datatypes only
 
-    def makeInfile(self, inpdict, indx):
+a grep for the idiom ${prefix} in the entire nf-core module text corpus was converted into the following list of extensions they seem to have.
+Some are bogus but the short ones might be genuine. Problem is that formats need to match Galaxy's expectations.
+
+nftypes = [ 'BedGraph', 'CollectMultipleMetrics', 'IS', 'IS_compare', 'IS_compare/output', 'R', 'abacas', 'afa', 'agp', 'alignment_summary_metrics', 'all', 'alleleCount', 'aln', 'asm', 'assembly_summary', 'back_chain', 'bai', 'ballgown', 'bam', 'base_distribution_by_cycle_metrics', 'bcf', 'bcf"', 'bed', 'bed"', 'bedGraph', 'bedGraph"', 'bedgraph"', 'bedpe', 'bg', 'bigBed', 'bigWig', 'bin', 'biom', 'bw', 'clustered', 'clw"', 'cnn', 'cns', 'cool', 'coords', 'count', 'coverage_metrics', 'cpn', 'crai', 'cram', 'csi', 'csi"', 'csv', 'csv"', 'cutoffs', 'd4', 'db', 'dbtype', 'delta', 'dict', 'dnd', 'domtbl"', 'embl', 'fa', 'fa;', 'faa', 'fas', 'fasta', 'fastq', 'fastq"', 'ffn', 'flagstat', 'fmask-all"', 'fmask-rf"', 'fna', 'fsa', 'gbff', 'gbk', 'gem', 'genepred', 'gfa', 'gff', 'gff3', 'gmask-all"', 'gmask-rf"', 'gtf', 'gtf"', 'gz', 'gz"', 'gz":', 'gz;', 'hdf5', 'hist', 'hmm', 'html', 'html"', 'ibf', 'idx', 'idxstats', 'igv":', 'index', 'insert_size_metrics', 'interval_list', 'interval_list"', 'intervals', 'json', 'junction', 'lca', 'list', 'loci', 'log', 'lookup', 'maf', 'mappability', 'mash_stats', 'mate1', 'mate2', 'mcool', 'megan"', 'meryldb', 'metrics', 'mpileup', 'mpileup"', 'msf"', 'narrowPeak', 'npz', 'og', 'out', 'paf', 'paf"', 'par', 'pdf', 'ped', 'phyi"', 'phyloFlash', 'phys"', 'pmask-all"', 'pmask-rf"', 'png', 'png"', 'pretext', 'profile', 'pytor', 'quality_by_cycle_metrics', 'quality_distribution_metrics', 'recal', 'recall":', 'refflat', 'refmap', 'report', 'rna_metrics', 'roh', 'sai', 'sam', 'score', 'screen', 'sdf', 'seg', 'simplified', 'sizes', 'snf', 'somalier', 'source', 'stat', 'stats', 'sthlm', 'sto"', 'summary', 'svg', 'tab', 'table', 'table"', 'table":', 'tax', 'tbi', 'tbi"', 'tbl', 'tbl"', 'tif', 'tiff', 'tiling', 'tmap', 'tracking', 'tranches', 'tre', 'tree"', 'tsv', 'tsv"', 'txt', 'txt"', 'txt":', 'unc', 'vcf', 'vcf"', 'version', 'vg', 'vgi"', 'wig', 'wig"', 'xg', 'xml', 'zip', ]
+
+Now have a working hmmer_align xml and test data as a result of manual editing.
+Need to make the generator use the right parameter names - it's tricky because fiddling the nf-core script text is a bit of a fool's errand - the whole project is really.
+pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
+
+        """
+        swaps = {'faa':'fasta', 'hmmer':'hmm3', 'sthlm.gz':"stockholm", 'sthlm': "stockholm", "fa": "fasta",
+            "hmm.gz": "hmm3", "hm.gz": "hmm3", }
+        fastaspawn = ['fna.gz','faa.gz','fasta.gz','fa.gz', 'faa', 'fa', ]
+        fixedfmt = []
+        for f in pfmt.split(','):
+            f = f.strip()
+            if f in fastaspawn:
+                if not 'fasta' in fixedfmt:
+                    fixedfmt.append('fasta')
+            elif swaps.get(f, None):
+                if not f in fixedfmt:
+                    fixedfmt.append(swaps[f])
+            else:
+                print('info: non-substituted format',f,'encountered in the input ppattern', pfmt)
+                fixedfmt.append(f)
+        return ','.join(fixedfmt)
+
+    def saveTestdata(self, pname, testDataURL):
+        """
+        may need to be ungzipped and in test folder
+        """
+        localpath = os.path.abspath(os.path.join(self.tooltest_dir, "%s_sample" % pname))
+        if not os.path.exists(localpath):
+            cl = ["wget", "-O", localpath, testDataURL]
+            if testDataURL.endswith('.gz'): # major kludge as usual...
+                gzlocalpath = "%s.gz" % localpath
+                cl = ["wget", "-q", "-O", gzlocalpath, testDataURL, "&&", "rm", "-f", localpath, "&&", "gunzip", gzlocalpath]
+            p = subprocess.run(' '.join(cl), shell = True)
+            if p.returncode:
+                print("Got", p.returncode, "from executing", " ".join(cl))
+                sys.exit(3)
+        else:
+            print('Not re-downloading', localpath)
+
+    def makeInfile(self, inpdict, indx, testURL):
         """
         {'faa': {'type': 'file', 'description': 'FASTA file containing amino acid sequences', 'pattern': '*.{faa,fasta}'}}
 
         need --input_files '{"name": "/home/ross/rossgit/galaxytf/database/objects/d/d/4/dataset_dd49e13c-bd4d-4f8b-8eaa-863483d021f6.dat", "CL": "input_tab", "format": "tabular", "label": "Tabular input file to plot", "help": "If 5000+ rows, html output will fail, but png will work.", "required": "required"}'
-        Need to add a cp to copy the named file to the template path
+        Need to copy testfile from localpath to the target tool test-dir
         """
         pdict = {}
         pid = list(inpdict.keys())[0]
         ppath = pid
-        [tname, tparamnames, tparamvalues] = self.nfTests[0]
-        ppath = tparamvalues[indx]
+        [tname, tparamnames, tparamvalues] = self.usetest
+        pindex = self.inparamnames.index(pid)
+        tdURL = tparamvalues[pindex]
         if not ppath:
             ppath = pid
-        plabel = inpdict[pid]["description"]
+        plabel = inpdict[pid]["description"].replace('\n',' ')
         ppattern = inpdict[pid]["pattern"]
         ppattern = ppattern.translate({ord(i): None for i in FILTERCHARS})
-        if "fasta" in ppattern:
-            ppattern = ppattern.replace("faa,", "")
-        else:
-            ppattern = ppattern.replace("faa", "fasta")
-        pps = ppattern.split(',')
-        if len(pps) > 1:
-            pps = pps[0]
-        else:
-            pps = ppattern
-        if pps == 'faa':
-            pps = 'fasta' # hack to get rid of nfcore datatype
-        self.scriptPrefixSubs[pps] = "$%s" % pid # will be substituted in configfile
+        if ppattern.startswith('*'): # why? "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
+            ppattern = ppattern[2:]
+        fps = self.fixParamFormat(ppattern) # kludge so Galaxy doesn't get confused.
+        #self.scriptPrefixSubs[pfmt] = "$%s" % pname # will be substituted in configfile
         pdict["CL"] = pid
-        pdict["name"] = ppath
-        pdict["format"] = ppattern
+        pdict["name"] = pid
+        pdict["format"] = fps
         pdict["help"] = ""
         pdict["label"] = plabel
         pdict["required"] = "0"
         self.tfcl.append("--input_files")
         self.tfcl.append(json.dumps(pdict))
+        self.saveTestdata(pid, tdURL)
 
     def makeOutfile(self, inpdict):
         """
@@ -349,15 +366,20 @@ class ParseNFMod:
         """
         pdict = {}
         pname = list(inpdict.keys())[0]
-        plabel = inpdict[pname]["description"]
+        plabel = inpdict[pname]["description"].replace('\n',' ')
         ppattern = inpdict[pname]["pattern"]
         if ppattern == "versions.yml":
             return  # ignore these artifacts
         ppattern = ppattern.translate({ord(i): None for i in FILTERCHARS})
-        if len(ppattern.split(",")) > 0:
-            pfmt = ppattern.split(",")[0]
+        if len(','.split(ppattern)) > 1:
+            print('!!!!!! warning in makeOutfile for %s - ppattern %s is multiple - using the first in case ${prefix} rears its ugly head' % (pid, ppattern))
+            pfmt = ','.split(ppattern)[0]
+        else:
+            pfmt = ppattern
+        if pfmt.startswith('*'): # these imply ${prefix}.
+            pfmt = pfmt[2:] # drop *.
         self.scriptPrefixSubs[pfmt] = "$%s" % pname # will be substituted in configfile
-        pfmt = pfmt.replace('faa', 'fasta').replace("sthlmgz","stockholm") # kludge so Galaxy doesn't get confused.
+        pfmt = self.fixParamFormat(pfmt) # kludge so Galaxy doesn't get confused.
         pdict["CL"] = pname
         pdict["name"] = pname
         pdict["format"] = pfmt
@@ -373,8 +395,7 @@ class ParseNFMod:
         """
         pdict = {}
         pname = list(inpdict.keys())[0]
-        plabel = inpdict[pname]["description"]
-        ppattern = inpdict[pname]["pattern"]
+        plabel = inpdict[pname]["description"].replace('\n',' ')
         [tname, tparamnames, tparamvalues] = self.nfTests[0]
         if ppattern.startswith("{") and ppattern.endswith("}"):
             # is a select comma separated list
@@ -397,8 +418,7 @@ class ParseNFMod:
         pdict = {}
         pname = list(inpdict.keys())[0]
         [tname, tparamnames, tparamvalues] = self.nfTests[0]
-        plabel = inpdict[pname]["description"]
-        ppattern = inpdict[pname]["pattern"]
+        plabel = inpdict[pname]["description"].replace('\n',' ')
         ptype = inpdict[pname]["type"]
         if ptype == "number":
             pdict["type"] = "float"
@@ -419,7 +439,7 @@ class ParseNFMod:
         """
         pdict = {}
         pname = list(inpdict.keys())[0]
-        plabel = inpdict[pname]["description"]
+        plabel = inpdict[pname]["description"].replace('\n',' ')
         ppattern = inpdict[pname]["pattern"]
         ppattern = ppattern.translate({ord(i): None for i in FILTERCHARS})  # remove {}
         texts = ppattern.split(",")
@@ -456,7 +476,7 @@ class ParseNFMod:
         self.tfcl.append("--help_text")
         self.tfcl.append(self.helpPath)
         self.tfcl.append("--tool_desc")
-        self.tfcl.append(t["description"])
+        self.tfcl.append(t["description"].replace('\n',' '))
         self.tfcl.append("--tool_version")
         self.tfcl.append("0.01")
         self.tfcl.append("--edit_additional_parameters")
@@ -484,29 +504,48 @@ class ParseNFMod:
 
         TODO: substitute right parameter names
 
+        oh dear. gzip isn't in the container is it? Let's just remove | gzip -c > every time we see it
+
         """
         sexe = None
         s = scrip.split('"""')[1]
-        s = s.replace('"${task.process}"', '"${task_process}"')
-        # self.scriptPrefixSubs[pfmt] = pname
+        print('### making script with subs', self.scriptPrefixSubs)
         for pfmt in self.scriptPrefixSubs.keys():
             subme = self.scriptPrefixSubs[pfmt]
             s = s.replace('${prefix}.%s' % pfmt, subme)
         ss = s.split("\n")  # first shebang line maybe
-        ss = [x for x in ss if x.strip() > ""]
+        ss = [x.strip() for x in ss if x.strip() > ""]
         sfirst = ss[0]
         if sfirst.startswith("#!"):
-            sexe = sfirst.split(" ")[1].strip()
+            sexe = sfirst.split(" ")[1]
             if sexe == "Rscript":
                 s = s.replace("<-", "=")
-                ss = s.split('\n')
         else:
-            sexe = 'sh' # assume is a bash script?
+            fiddled = []
+            fixargs = False
+            sexe = 'bash' # assume is a bash script?
+            for i, row in enumerate(ss): # replace bogus // with proper /
+                if "$args" in row: # this is such a kludge - who knows what the mad fuckers do with $args.
+                    fiddled.append('### full disclosure! nf-core $args has been removed by nftoolmaker.py\n')
+                    fixargs = True
+                elif row.rstrip().endswith(r'\\'):
+                    ss[i] = ss[i][:-1]
+                elif 'gzip' in row:
+                    row = row.replace('| gzip -c ','')
+                    ss[i] = row
+                    fiddled.append('### full disclosure! | gzip -c removed by nftoolmaker.py\n')
+                print('row=',row, ss[i])
+            if fixargs:
+                ss = [x for x in ss if not "$args" in x]
+            s = '\n'.join(ss)
+        s = s.replace('"${task.process}"', '"${task_process}"')
+        s = ''.join(fiddled) + s
         scriptf, self.scriptPath = tempfile.mkstemp(
             suffix=".script", prefix="nftoolmaker", dir=None, text=True
         )
+        print('#### script=',s)
         with open(self.scriptPath, "w") as f:
-            f.write('\n'.join(ss))
+            f.write(s)
             f.write("\n")
         self.tfcl.append("--script_path")
         self.tfcl.append(self.scriptPath)
@@ -544,8 +583,8 @@ class ParseNFMod:
 if __name__ == "__main__":
 
     def prepargs(clist):
-        parser = argparse.ArgumentParser()
-        a = parser.add_argument
+        anotherparser = argparse.ArgumentParser()
+        a = anotherparser.add_argument
         a("--nftest", action="store_true", default=False)
         a("--script_path", default=None)
         a("--sysexe", default=None)
@@ -582,7 +621,7 @@ if __name__ == "__main__":
             default=[],
             action="append",
         )  # history data items to add to the tool base directory
-        args = parser.parse_args(clist)
+        args = anotherparser.parse_args(clist)
         return args
 
 
@@ -590,28 +629,27 @@ if __name__ == "__main__":
     a = parser.add_argument
     a("--nftext", required=True)
     a("--nfyml", required=True)
-    # tf collection name is always toolgen
     a("--collpath", default="toolgen")
     a("--toolgz", required=True)
     a("--tool_dir", required=True)
-    args = parser.parse_args()
-    nft = open(args.nftext, "r").readlines()
-    nfy = open(args.nfyml, "r")
+    nfargs = parser.parse_args()
+    nft = open(nfargs.nftext, "r").readlines()
+    nfy = open(nfargs.nfyml, "r")
     nfym = yaml.safe_load(nfy)
     cl = ["touch", "local_tool_conf.xml"]
     subprocess.run(cl)
-    nfmod = ParseNFMod(nft, nfym, args)
+    nfmod = ParseNFMod(nft, nfym, nfargs)
     cl = nfmod.tfcl
     print("cl=", "\n".join(cl))
     args = prepargs(cl)
     assert (
         args.tool_name
-    ), "## This ToolFactory cannot build a tool without a tool name. Please supply one."
+    ), "## This nf-core module ToolFactory cannot build a tool without a tool name. Please supply one."
     logfilename = os.path.join(
-        args.tfcollection, "ToolFactory_make_%s_log.txt" % args.tool_name
+       args.tool_dir, "nfmodToolFactory_make_%s_log.txt" % args.tool_name
     )
-    if not os.path.exists(args.tfcollection):
-        os.mkdir(args.tfcollection)
+    if not os.path.exists(nfargs.collpath):
+        os.mkdir(nfargs.collpath)
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(logfilename, mode="w")
     fformatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")

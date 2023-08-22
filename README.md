@@ -185,8 +185,20 @@ keywords are "include", "workflow" and the testnames
 includes contain the workflow test names
 workflow { to } has the test file and test name to match up
 with test alias parameter names in order inside parentheses.
+
 Why aliases?
+
 Seems we like the flexibility to make things more tricky and intertwined than necessary where we can.
+
 The tool has metadata, but the tests can use different metadata names sometimes, because, well, that seems to be what
-nextflow developers seem to like - freedom! freedom! freedom!.
-Freedom to fill the test repository with duplicate files! Wonderful.
+nextflow developers seem to like - freedom! freedom! freedom!. Freedom to fill the test repository with duplicate files! Wonderful.
+
+Argh.
+
+All of the bash scripts seem to use \\ as a continuation. Bash does not like that so they all need to be fiddled into submission.
+
+Need to dump each test file into the new tool folder test directory with the correct name.
+
+The use of the idiom ${prefix}.bazbar to name output files is painful. These need to be replaced in entirety with the correct output parameter name using the extension as the clue to finding the corresponding output - but not using any extension in the script
+
+test parameter names are often bogus. Must use the metadata parameter names but rely on their ordering 😡

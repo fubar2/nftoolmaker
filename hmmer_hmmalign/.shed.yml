@@ -1,0 +1,6 @@
+category: ToolFactory generated Tools
+description: Biosequence analysis using profile hidden Markov models
+name: hmmer_hmmalign
+owner: toolfactory
+synopsis: Biosequence analysis using profile hidden Markov models
+type: unrestricted

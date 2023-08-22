@@ -7,13 +7,13 @@ import os
 import subprocess
 
 corepath = '../nfcore_modules/modules/nf-core'
-cl = ["python", "nftoolmaker.py",  "--tool_dir", "."]
+cl = ["python", "nftoolmaker.py",  "--tool_dir", os.path.abspath('.')]
 
 def amod(mod, dlist):
 
     yam = [x for x in dlist if x.endswith('.yml')][0]
     tex = [x for x in dlist if x.endswith('.nfcore') or x.endswith('.nf')][0]
-    toolgz = '%s_nfmod_tool.tar.gz' % os.path.split(yam)[1]
+    toolgz = '%s_nfmod_tool.tar.gz' % os.path.split(mod)[1]
     acl = cl + ["--nftext", tex, "--nfyml",yam, "--toolgz", toolgz]
     print('### amod calling nftoolmaker with', acl)
     p = subprocess.run(acl)

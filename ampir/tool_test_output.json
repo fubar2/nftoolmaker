@@ -10,7 +10,7 @@
             "data": {
                 "inputs": {
                     "faa": {
-                        "id": "cd84ca000e83becf",
+                        "id": "438ed6b908c631c1",
                         "src": "hda"
                     },
                     "min_length": "10",
@@ -18,40 +18,35 @@
                     "model": "precursor"
                 },
                 "job": {
-                    "command_version": "'0.01'",
-                    "create_time": "2023-08-21T03:33:28.075962",
+                    "command_version": "0.01",
+                    "create_time": "2023-08-22T05:18:40.298352",
                     "dependencies": [],
                     "exit_code": 0,
                     "galaxy_version": "23.0",
-                    "history_id": "0005d27f1dc662c8",
-                    "id": "999d792a6e3b4811",
+                    "history_id": "6e7233e069aad1a7",
+                    "id": "a870a2373b63ec38",
                     "inputs": {
                         "faa": {
-                            "id": "cd84ca000e83becf",
+                            "id": "438ed6b908c631c1",
                             "src": "hda",
-                            "uuid": "8403f804-b284-4947-ac67-a5f0124f0172"
+                            "uuid": "ed2bdc2c-e8d6-4f0e-9dae-e5869d20b5b3"
                         }
                     },
                     "job_messages": [],
                     "job_stderr": "",
                     "job_stdout": "",
                     "model_class": "Job",
-                    "output_collections": {
-                        "toolgen": {
-                            "id": "06cf32e9aa8aad75",
-                            "src": "hdca"
-                        }
-                    },
+                    "output_collections": {},
                     "outputs": {
                         "amps_faa": {
-                            "id": "38a4f9f8fe8c72ea",
+                            "id": "9bbe98ee7f81c7a0",
                             "src": "hda",
-                            "uuid": "71b9de5f-c2a7-472c-8c87-5a2abd1c9f94"
+                            "uuid": "8a65b572-9400-4279-9750-6a1d2b9d07d8"
                         },
                         "amps_tsv": {
-                            "id": "650856f0d88ccdca",
+                            "id": "698148230dfad69f",
                             "src": "hda",
-                            "uuid": "0edf73c3-526d-4529-8b7c-f1b744648416"
+                            "uuid": "f1e68ca2-4414-4c3b-886b-65e98b457719"
                         }
                     },
                     "params": {
@@ -68,13 +63,13 @@
                     "tool_id": "ampir",
                     "tool_stderr": "",
                     "tool_stdout": "",
-                    "update_time": "2023-08-21T03:33:38.642681"
+                    "update_time": "2023-08-22T05:18:50.989847"
                 },
                 "status": "success",
                 "test_index": 0,
-                "time_seconds": 20.100415468215942,
+                "time_seconds": 20.848257303237915,
                 "tool_id": "ampir",
-                "tool_version": "'0.01'"
+                "tool_version": "0.01"
             },
             "has_data": true,
             "id": "ampir-0"

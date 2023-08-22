@@ -1,21 +1,21 @@
-<tool name="ampir" id="ampir" version="'0.01'">
+<tool name="ampir" id="ampir" version="0.01">
   <!--Source in git at: https://github.com/fubar2/galaxy_tf_overlay-->
-  <!--Created by 'toolfactory@galaxy.org' at 21/08/2023 13:33:10 using the Galaxy Tool Factory.-->
-  <description>'A toolkit to predict antimicrobial peptides from protein sequences on a genome-wide scale.'</description>
+  <!--Created by toolfactory@galaxy.org at 22/08/2023 15:18:22 using the Galaxy Tool Factory.-->
+  <description>A toolkit to predict antimicrobial peptides from protein sequences on a genome-wide scale.</description>
   <requirements>
     <requirement version="1.1.0" type="package">r-ampir</requirement>
   </requirements>
   <stdio>
     <exit_code range="1:" level="fatal"/>
   </stdio>
-  <version_command><![CDATA[echo "'0.01'"]]></version_command>
+  <version_command><![CDATA[echo "0.01"]]></version_command>
   <command><![CDATA[#set prefix = "ampir"
 #set task_process = "ampir"
-mkdir -p toolgen &&
 Rscript $runme]]></command>
   <configfiles>
     <configfile name="runme"><![CDATA[#set prefix = "ampir"
 #set task_process = "ampir"
+#set args = " "
 #!/usr/bin/env Rscript
 library(ampir)
 input_seqs = read_faa('${faa}')
@@ -42,15 +42,11 @@ close(f)]]></configfile>
     </param>
   </inputs>
   <outputs>
-    <collection name="toolgen" type="list" label="nfcore module spawn">
-      <discover_datasets pattern="__name_and_ext__" directory="toolgen" visible="false"/>
-    </collection>
     <data name="amps_faa" format="fasta" label="File containing AMP predictions in amino acid FASTA format" hidden="false"/>
     <data name="amps_tsv" format="tsv" label="File containing AMP predictions in TSV format" hidden="false"/>
   </outputs>
   <tests>
     <test>
-      <output_collection name="toolgen"/>
       <output name="amps_faa" value="amps_faa_sample" compare="sim_size" delta="1000"/>
       <output name="amps_tsv" value="amps_tsv_sample" compare="sim_size" delta="1000"/>
       <param name="faa" value="faa_sample"/>
