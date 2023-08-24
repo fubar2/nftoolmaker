@@ -171,16 +171,7 @@ script:
     """
 }
 ```
-
-### Reproducibility issues
-
-The executable for nf-core R scripts is specified by a shebang (like this for ampir: #!/usr/bin/env Rscript) so R is always the latest installed version - convenient but not reproducible - nothing in metadata about the script executable version. Unless as Bjoern points out, they always pin a container from Galaxy :) but not sure that’s universal in all modules? Does nf-core always run modules in singularity?
-Bash scripts call a binary - presumably the one installed as a dependency from the “conda” entry in the main.nf file such as https://github.com/nf-core/modules/blob/master/modules/nf-core/abacas/main.nf
-
-The architecture is so fussy and complicated that reproducibility seems at risk in places.
-The version is recorded at the end of each run, but really not ideal. Examples of “updaters” include:
-amrfinderplus includes an updater module, that grabs whatever the latest binary happens to be for this tool - they do record the version at least I guess - https://github.com/nf-core/funcscan/blob/1.1.3/modules/nf-core/amrfinderplus/update/main.nf
-A gem of an example of how tools are updated from https://github.com/nf-core/funcscan/blob/1.1.3/modules/nf-core/antismash/antismashlitedownloaddatabases/main.nf that seems to
+An example updates from https://github.com/nf-core/funcscan/blob/1.1.3/modules/nf-core/antismash/antismashlitedownloaddatabases/main.nf that seems to
 poke things from the local python3.8 with a big stick. This is scary.
 
 ```
@@ -243,15 +234,6 @@ keywords are "include", "workflow" and the testnames
 includes contain the workflow test names
 workflow { to } has the test file and test name to match up
 with test alias parameter names in order inside parentheses.
-
-Why aliases?
-
-Seems we like the flexibility to make things more tricky and intertwined than necessary where we can.
-
-The tool has metadata, but the tests can use different metadata names sometimes, because, well, that seems to be what
-nextflow developers seem to like - freedom! freedom! freedom!. Freedom to fill the test repository with duplicate files! Wonderful.
-
-Argh.
 
 All of the bash scripts seem to use \\ as a continuation. Bash does not like that so they all need to be fiddled into submission.
 
