@@ -1,33 +1,4 @@
 """
-            split into bits - test file, test name, test parameter values for each test
-
-            if comma separators between the start and end ], split and give all the same name - it has no meaning as everything's positional here
-
-             input = [
-        [ id:'test', single_end:false ], // meta map
-        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true),
-        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', checkIfExists: true),
-        false,
-        false,
-        false
-    ]
-
-     otherwise perhaps build the list by appending from individual =
-
-workflow test_hmmer_eslreformat_afa {
-
-    input = [
-        [ id:'test' ], // meta map
-        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz')      // Change to params.test_data syntax after the data is included in ./tests/config/test_data.config
-    ]
-
-    hmm   = file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz')
-
-    HMMER_HMMALIGN ( input, hmm )
-
-    HMMER_ESLREFORMAT_AFA ( HMMER_HMMALIGN.out.sthlm )
-}
-
 #!/usr/bin/env nextflow
 
 nextflow.enable.dsl = 2
@@ -100,11 +71,10 @@ def tests():
     print([x for x in res])
     #[(ParseResults(['input'], {}), 9, 14), (ParseResults(["id:'test'"], {}), 31, 57), (ParseResults(['https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz'], {}), 70, 288)]
 
-
-
-nftestURL = Suppress(Literal("file(params.test_data[")) + Word(alphanums + "(':/_+[].-") +  Suppress(",',") + Suppress(restOfLine))
+stuffInUrls = alphanums + "(':/_+[].-"
+nftestURL = Suppress(Literal("file(params.test_data[")) + Word(stuffInUrls) +  Suppress(",',") + Suppress(restOfLine)
 nftestURL.setName("nftestURL")
-realtestURL = Suppress(Literal("file('")) + Word(alphanums + "(:/_+[].-") +  Suppress("',")[...] + Suppress(restOfLine)
+realtestURL = Suppress(Literal("file('")) + Word(stuffInUrls) +  Suppress("',")[...] + Suppress(restOfLine)
 realtestURL.setName("realtestURL")
 paramname = Word(alphanums) + Suppress("=") + Suppress("[")
 paramname.setName("paramname")
