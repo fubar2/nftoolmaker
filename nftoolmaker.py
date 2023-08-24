@@ -53,10 +53,13 @@ class ParseNFMod:
     """
 
     def __init__(self, nft, nfy, args):
+        self.chainedtestout = 'chainedtests.xls'
+        f = open(self.chainedtestout,'w')
+        f.close()
         self.testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
-        self.cl_coda = ["--tested_tool_out", args.toolgz, "--galaxy_root", "LAZ", "--tool_dir", args.tool_dir, "--tfcollection", args.collpath]
-        self.tool_name = nfy["name"].replace("'",'').lower()
-        self.tool_dir = os.path.join(args.tool_dir, self.tool_name)
+        self.tool_name = nfy["name"].replace("'",'').lower().strip()
+        self.tool_dir = os.path.join(args.galaxy_root,'local_tools', self.tool_name)
+        self.cl_coda = ["--tested_tool_out", args.toolgz, "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
         self.tooltest_dir = os.path.join(self.tool_dir, 'test-data') # for test input files to go
         os.makedirs(self.tool_dir, exist_ok=True)
         os.makedirs(self.tooltest_dir, exist_ok=True)
@@ -65,8 +68,7 @@ class ParseNFMod:
         self.nftext = nft
         self.nfyaml = nfy
         self.args = args
-        self.localTestDir = os.path.join(args.tool_dir, "nfmodtestfiles")
-        self.localTestFile = os.path.join(args.tool_dir, "nfgenomicstestdata.txt")
+        self.localTestFile =  "nfgenomicstestdata.txt"
         self.setTestFiles()
         self.tfcl = ["--parampass", "embednfmod"]
         self.inparamnames = []
@@ -94,13 +96,16 @@ class ParseNFMod:
                 print("Ignoring map specified as input %s" % str(inpdict))
             elif ptype == "file":
                 (tname, tparamnames, tparamvalues) = self.usetest
-                print('############ tests=',self.usetest, 'i', indx, 'inpdict', inpdict, 'inparamnames', self.inparamnames)
+                print('############ tests=', self.usetest, 'pname',pname, 'i', indx, 'inpdict', inpdict, 'inparamnames', self.inparamnames)
                 realindex =  self.inparamnames.index(pname)
                 localfile = tparamvalues[realindex] # we hope...
                 self.makeInfile(inpdict,indx, localfile)
                 indx += 1
             elif ptype == "string":
                 self.makeString(inpdict, indx)
+                indx += 1
+            elif ptype == "val":
+                self.makeFlag(inpdict, indx)
                 indx += 1
             elif ptype in ["number", "integer"]:
                 self.makeNum(inpdict, indx)
@@ -144,6 +149,7 @@ class ParseNFMod:
 
     def nfParseTests(self, nftesttext):
         """
+        extract test parameters from the test nf text
     shlex.split(shite)
 
     ['#!/usr/bin/env', 'nextflow', 'nextflow.enable.dsl', '=', '2', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_NO_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'workflow', 'test_survivor_filter_no_bed', '{', 'input_no_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', '[]', ']', 'SURVIVOR_FILTER_NO_BED', '(', 'input_no_bed,', '51,', '10001,', '0.01,', '10', ')', '}', 'workflow', 'test_survivor_filter', '{', 'input_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', 'file(params.test_data[homo_sapiens][genome][genome_bed],', 'checkIfExists:', 'true)', ']', 'SURVIVOR_FILTER_BED', '(', 'input_bed,', '51,', '10001,', '0.01,', '10', ')', '}']
@@ -198,6 +204,35 @@ class ParseNFMod:
         def parseATest(w, testNames):
             """
             split into bits - test file, test name, test parameter values for each test
+
+            if comma separators between the start and end ], split and give all the same name - it has no meaning as everything's positional here
+
+             input = [
+        [ id:'test', single_end:false ], // meta map
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true),
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', checkIfExists: true),
+        false,
+        false,
+        false
+    ]
+
+     otherwise perhaps build the list by appending from individual =
+
+workflow test_hmmer_eslreformat_afa {
+
+    input = [
+        [ id:'test' ], // meta map
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz')      // Change to params.test_data syntax after the data is included in ./tests/config/test_data.config
+    ]
+
+    hmm   = file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz')
+
+    HMMER_HMMALIGN ( input, hmm )
+
+    HMMER_ESLREFORMAT_AFA ( HMMER_HMMALIGN.out.sthlm )
+}
+
+
             """
             tname = w[0]
             tparamvalues = [] # indexed by test param name k
@@ -213,7 +248,12 @@ class ParseNFMod:
                 elif indx < (lw -1) and w[indx+1] == "=": # start of a test parameter
                     pname = w[indx].replace(',','') # shlex...
                     indx += 1
-                    if w[indx+1] == "[": # mapping start to
+                    if w[indx+1] == "[": # mapping start - often a single file parameter but could be a simple comma separated list
+                        mess = []
+                        while indx < lw and w[indx] != "]": # brittle - last is alone whereas mapping ends are usually "]," in shlex
+                            mess.append(w[indx]
+                            indx += 1
+
                         (indx, v) = getTestdataPath(indx, w)
                         indx += 1
                     else:
@@ -221,7 +261,7 @@ class ParseNFMod:
                         if v.startswith('file('):
                             v = v.replace('file(','').replace(')','')
                         indx += 2
-                    tparamvalues.append(v)
+                        tparamvalues.append(v)
                 else:
                     indx += 1
             return (tname, tparamnames, tparamvalues)
@@ -249,6 +289,12 @@ class ParseNFMod:
                     aninc = nfshlex[indx+4].replace('}', '') # shlex does this
                     indx += 4
                 testNames.append(aninc)
+                if not aninc.startswith(self.tool_name.upper()):
+                    print(self.tool_name, 'has a chained test from', aninc)
+                    s = "%s\t%s\n" % (self.tool_name, aninc.lower())
+                    with open(self.chainedtestout, 'a') as f:
+                        f.write(s)
+                    sys.exit(9)
             else:
                 indx += 1
         for w in nfwf:
@@ -292,7 +338,7 @@ Need to make the generator use the right parameter names - it's tricky because f
 pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
 
         """
-        swaps = {'faa':'fasta', 'hmmer':'hmm3', 'sthlm.gz':"stockholm", 'sthlm': "stockholm", "fa": "fasta",
+        swaps = {'faa':'fasta', 'hmmer':'hmm3', 'hmm':'hmm3', 'sthlm.gz':"stockholm", 'sthlm': "stockholm", "fa": "fasta",
             "hmm.gz": "hmm3", "hm.gz": "hmm3", }
         fastaspawn = ['fna.gz','faa.gz','fasta.gz','fa.gz', 'faa', 'fa', ]
         fixedfmt = []
@@ -325,6 +371,28 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
                 sys.exit(3)
         else:
             print('Not re-downloading', localpath)
+
+    def makeFlag(self, inpdict, indx):
+        """
+        boolean command line flag
+        """
+        pdict = {}
+        pname = list(inpdict.keys())[0]
+        [tname, tparamnames, tparamvalues] = self.nfTests[0]
+        plabel = inpdict[pname]["description"].replace('\n',' ')
+        ptype = inpdict[pname]["type"]
+        if ptype == "val":
+            pdict["type"] = "clflag"
+        else:
+            print('Unexpected type (not "val") encountered in makeFlag', ptype)
+        pdict["CL"] = pname
+        pdict["name"] = pname
+        pdict["value"] = tparamvalues[indx].replace('"', "")
+        pdict["help"] = ""
+        pdict["label"] = plabel
+        pdict["repeat"] = "0"
+        self.tfcl.append("--additional_parameters")
+        self.tfcl.append(json.dumps(pdict))
 
     def makeInfile(self, inpdict, indx, testURL):
         """
@@ -509,7 +577,6 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         sexe = None
         s = scrip.split('"""')[1]
-        print('### making script with subs', self.scriptPrefixSubs)
         for pfmt in self.scriptPrefixSubs.keys():
             subme = self.scriptPrefixSubs[pfmt]
             s = s.replace('${prefix}.%s' % pfmt, subme)
@@ -534,7 +601,6 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
                     row = row.replace('| gzip -c ','')
                     ss[i] = row
                     fiddled.append('### full disclosure! | gzip -c removed by nftoolmaker.py\n')
-                print('row=',row, ss[i])
             if fixargs:
                 ss = [x for x in ss if not "$args" in x]
             s = '\n'.join(ss)
@@ -543,7 +609,6 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         scriptf, self.scriptPath = tempfile.mkstemp(
             suffix=".script", prefix="nftoolmaker", dir=None, text=True
         )
-        print('#### script=',s)
         with open(self.scriptPath, "w") as f:
             f.write(s)
             f.write("\n")
@@ -596,7 +661,7 @@ if __name__ == "__main__":
         a("--bad_user", default=None)
         a("--help_text", default=None)
         a("--tool_desc", default=None)
-        a("--tool_dir", default=None)
+        a("--toolfactory_dir", default=None)
         a("--tool_version", default="0.01")
         a("--citations", default=None)
         a("--cl_suffix", default=None)
@@ -631,9 +696,17 @@ if __name__ == "__main__":
     a("--nfyml", required=True)
     a("--collpath", default="toolgen")
     a("--toolgz", required=True)
-    a("--tool_dir", required=True)
+    a("--toolfactory_dir", required=True, help="Path to the toolfactory directory on the local Galaxy - needed for utility scripts")
+    a("--galaxy_root", required=True, help="Path to local Galaxy to run planemo tests")
     nfargs = parser.parse_args()
     nft = open(nfargs.nftext, "r").readlines()
+    for i,x in enumerate(nft): # remove bogus comment crap
+        row = x.split() # need to find '//' on it's own as the start of a comment - dangerous
+        if '//' in row:
+            rend = row.index('//')
+            fixedrow = row[:rend]
+            nft[i] = ' '.join(fixedrow)
+            print('####### truncated row from', nfargs.nftext, row, 'to', fixedrow)
     nfy = open(nfargs.nfyml, "r")
     nfym = yaml.safe_load(nfy)
     cl = ["touch", "local_tool_conf.xml"]
@@ -645,9 +718,7 @@ if __name__ == "__main__":
     assert (
         args.tool_name
     ), "## This nf-core module ToolFactory cannot build a tool without a tool name. Please supply one."
-    logfilename = os.path.join(
-       args.tool_dir, "nfmodToolFactory_make_%s_log.txt" % args.tool_name
-    )
+    logfilename = "nfmodToolFactory_make_%s_log.txt" % args.tool_name
     if not os.path.exists(nfargs.collpath):
         os.mkdir(nfargs.collpath)
     logger.setLevel(logging.INFO)

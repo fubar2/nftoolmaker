@@ -54,7 +54,7 @@ class Tool_Factory:
         and prepare elements needed for galaxyxml tool generation
         """
         # sed will update these settings during tfsetup.py first run
-        self.GALAXY_ADMIN_KEY = "1874907739332310784"
+        self.GALAXY_ADMIN_KEY = "956432473193251840"
         self.GALAXY_URL = "http://localhost:8080"
         self.myversion = "V3.0 February 2023"
         self.verbose = True
@@ -82,6 +82,7 @@ class Tool_Factory:
             self.local_tools = "./"
         else:
             self.local_tools = os.path.join(args.galaxy_root, "local_tools")
+        os.makedirs(self.local_tools, exist_ok=True)
         self.local_tool_conf = os.path.join(self.local_tools, "local_tool_conf.xml")
         self.ourcwd = os.getcwd()
         self.collections = []
@@ -1072,7 +1073,7 @@ class Tool_Factory:
         Failure will eventually get stuck. Might need a timeout in the script
         """
         self.test_outs = self.tooltestd
-        scrpt = os.path.join(self.args.tool_dir, "toolfactory_fast_test.sh")
+        scrpt = os.path.join(self.args.toolfactory_dir, "toolfactory_fast_test.sh")
         extrapaths = self.tooltestd
         cl = ["/usr/bin/bash", scrpt, self.tool_name, extrapaths, extrapaths]
         self.logger.info("fast_local_test executing %s \n" % (" ".join(cl)))
@@ -1157,7 +1158,7 @@ class Tool_Factory:
         """
         cll = [
             "/usr/bin/bash",
-            "%s/install_tf_deps.sh" % self.args.tool_dir,
+            "%s/install_tf_deps.sh" % self.args.toolfactory_dir,
             self.tool_name,
         ]
         self.logger.info("Running %s\n" % " ".join(cll))
@@ -1206,7 +1207,7 @@ def main():
     a("--bad_user", default=None)
     a("--help_text", default=None)
     a("--tool_desc", default=None)
-    a("--tool_dir", default=None)
+    a("--toolfactory_dir", default=None)
     a("--tool_version", default="0.01")
     a("--citations", default=None)
     a("--cl_suffix", default=None)

@@ -7,7 +7,7 @@ import os
 import subprocess
 
 corepath = '../nfcore_modules/modules/nf-core'
-cl = ["python", "nftoolmaker.py",  "--tool_dir", os.path.abspath('.')]
+cl = ["python", "nftoolmaker.py",  "--galaxy_root", "/home/ross/rossgit/galaxytf", "--toolfactory_dir", "/home/ross/rossgit/galaxytf/local_tools/toolfactory"]
 
 def amod(mod, dlist):
 
@@ -26,7 +26,7 @@ def convertd(d):
     dlist = os.listdir(d)
     bpath, dname = os.path.split(d)
     dlist = [os.path.join(bpath,dname,x) for x in dlist]
-    print('## convertd dlist',dlist,'for d',d)
+    #print('## convertd dlist',dlist,'for d',d)
     fnames = [x.split('/')[-1] for x in dlist]
     if "meta.yml" in fnames:
         amod(d, dlist)

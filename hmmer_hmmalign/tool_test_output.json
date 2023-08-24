@@ -10,52 +10,72 @@
             "data": {
                 "inputs": {
                     "fasta": {
-                        "id": "2e1f1c3c605af0ba",
+                        "id": "d9d63abdbc45bcf1",
                         "src": "hda"
                     },
                     "hmm": {
-                        "id": "7ef6d0ba160cd6ad",
+                        "id": "d83cfa02853c7ab0",
                         "src": "hda"
                     }
                 },
                 "job": {
-                    "command_line": "bash /tmp/tmp_d_4lvdz/job_working_directory/000/3/configs/tmpr8347yqi",
                     "command_version": "0.01",
-                    "create_time": "2023-08-21T23:38:51.831503",
-                    "dependencies": [],
+                    "create_time": "2023-08-23T03:42:30.474768",
+                    "dependencies": [
+                        {
+                            "cacheable": false,
+                            "dependency_resolver": {
+                                "auto_init": true,
+                                "auto_install": false,
+                                "can_uninstall_dependencies": true,
+                                "ensure_channels": "conda-forge,bioconda,defaults",
+                                "model_class": "CondaDependencyResolver",
+                                "prefix": "/home/ross/rossgit/galaxytf/database/dependencies/_conda",
+                                "read_only": false,
+                                "resolver_type": "conda",
+                                "resolves_simple_dependencies": true,
+                                "use_local": false,
+                                "versionless": false
+                            },
+                            "dependency_type": "conda",
+                            "environment_path": "/home/ross/rossgit/galaxytf/database/dependencies/_conda/envs/__hmmer@3.3.2",
+                            "exact": true,
+                            "model_class": "MergedCondaDependency",
+                            "name": "hmmer",
+                            "version": "3.3.2"
+                        }
+                    ],
                     "exit_code": 0,
-                    "external_id": "1446381",
                     "galaxy_version": "23.0",
-                    "history_id": "2e1f1c3c605af0ba",
-                    "id": "2cdae4467a26ec58",
+                    "history_id": "f0687981677a67ee",
+                    "id": "ea412ac1f38d02ee",
                     "inputs": {
                         "fasta": {
-                            "id": "2e1f1c3c605af0ba",
+                            "id": "d9d63abdbc45bcf1",
                             "src": "hda",
-                            "uuid": "37272469-8a29-4be5-9814-1811d960fb82"
+                            "uuid": "de66cbb7-40a1-4e84-8205-0dbe39912417"
                         },
                         "hmm": {
-                            "id": "7ef6d0ba160cd6ad",
+                            "id": "d83cfa02853c7ab0",
                             "src": "hda",
-                            "uuid": "8bf5d0cd-ffcc-4170-ac54-1d107bcd84a7"
+                            "uuid": "5011ee2f-01a0-4a7c-8bb4-76b1d50d26e8"
                         }
                     },
                     "job_messages": [],
-                    "job_metrics": [],
                     "job_stderr": "",
                     "job_stdout": "",
                     "model_class": "Job",
                     "output_collections": {},
                     "outputs": {
                         "sthlm": {
-                            "id": "2cdae4467a26ec58",
+                            "id": "80ebdce72f8c36d9",
                             "src": "hda",
-                            "uuid": "39c9be97-03c2-4bfc-becd-ac1c3e40eb9a"
+                            "uuid": "a8a1ae19-c7f2-4fc3-b640-ca3b0975c83e"
                         }
                     },
                     "params": {
                         "__input_ext": "\"fasta\"",
-                        "chromInfo": "\"/home/ross/galaxy-release_21.01/tool-data/shared/ucsc/chrom/?.len\"",
+                        "chromInfo": "\"/home/ross/rossgit/galaxytf/tool-data/shared/ucsc/chrom/?.len\"",
                         "dbkey": "\"?\""
                     },
                     "state": "ok",
@@ -64,13 +84,11 @@
                     "tool_id": "hmmer_hmmalign",
                     "tool_stderr": "",
                     "tool_stdout": "",
-                    "traceback": null,
-                    "update_time": "2023-08-21T23:38:56.932206",
-                    "user_email": "planemo@galaxyproject.org"
+                    "update_time": "2023-08-23T03:42:36.423416"
                 },
                 "status": "success",
                 "test_index": 0,
-                "time_seconds": 15.024516344070435,
+                "time_seconds": 16.164676666259766,
                 "tool_id": "hmmer_hmmalign",
                 "tool_version": "0.01"
             },

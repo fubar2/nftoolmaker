@@ -1,6 +1,6 @@
 <tool name="hmmer_hmmalign" id="hmmer_hmmalign" version="0.01">
   <!--Source in git at: https://github.com/fubar2/galaxy_tf_overlay-->
-  <!--Created by toolfactory@galaxy.org at 22/08/2023 22:28:05 using the Galaxy Tool Factory.-->
+  <!--Created by toolfactory@galaxy.org at 23/08/2023 13:42:11 using the Galaxy Tool Factory.-->
   <description>Biosequence analysis using profile hidden Markov models</description>
   <requirements>
     <requirement version="3.3.2" type="package">hmmer</requirement>
