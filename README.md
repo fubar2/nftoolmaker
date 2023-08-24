@@ -2,11 +2,53 @@
 
 ## Exploring automated conversion of nf-core to Galaxy tools.
 
-Trying to make a tool that will download and parse a github nf-core module repository, and run the toolfactory.py script by constructing a suitable command line.
+A tool that will download and parse a github nf-core module repository, and run the toolfactory.py script by constructing a suitable command line.
 
 The repository https://github.com/nf-core/modules/tree/master/modules/nf-core has lots of modules, described in paired files - meta.yml and main.nf. They could potentially be auto-converted into Galaxy tools by constructing a suitable command line for the ToolFactory script.
 
+### nfParser.py uses pyparsing to parse a simple test case nextflow script !
+
+
+nfParser.py works on one hmmer test case
+
+```
+#!/usr/bin/env nextflow
+nextflow.enable.dsl = 2
+include { HMMER_HMMSEARCH } from '../../../../../modules/nf-core/hmmer/hmmsearch/main.nf'
+workflow test_hmmer_hmmsearch {
+    input = [
+        [ id:'test', single_end:false ], // meta map
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true),
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', checkIfExists: true),
+        false,
+        false,
+        false
+    ]
+    HMMER_HMMSEARCH ( input )
+}
+workflow test_hmmer_hmmsearch_optional {
+    input = [
+        [ id:'test', single_end:false ], // meta map
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true),
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', checkIfExists: true),
+        true,
+        true,
+        true
+    ]
+    HMMER_HMMSEARCH ( input )
+}
+```
+producing a pyparsing internal representation that's easy to break apart
+```
+>>> nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + OneOrMore(includeTestname) + Group( OneOrMore(nftestname))
+>>> print(nftest.parse_string(nftesttext))
+[['#', '!/usr/bin/env', 'nextflow'], ['nextflow', '.enable.dsl', '=', ' 2'], 'HMMER_HMMSEARCH', [['test_hmmer_hmmsearch', 'input', ['[', "id:'test',", 'single_end:false', ']'], 'https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', 'https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', 'false', 'false', 'false', 'HMMER_HMMSEARCH', 'input', ')'], ['test_hmmer_hmmsearch_optional', 'input', ['[', "id:'test',", 'single_end:false', ']'], 'https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', 'https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', 'true', 'true', 'true', 'HMMER_HMMSEARCH', 'input', ')']]]
+```
+Might not look like much, but that's more than we need.
+
 ### Progress to date.
+
+
 
 August 23
 
