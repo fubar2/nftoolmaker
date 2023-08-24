@@ -110,7 +110,7 @@ def tests():
 stuffInUrls = alphanums + ":/_+[].-?&"
 
 # some utility DSL syntax
-shebang = "#" + Word(alphanums + "#!/_.") + Word(alphanums + "./") # #!/usr/bin/env nextflow
+shebang = "#" + Word(alphanums + "#!/_.") + Word(alphanums + "./")  # #!/usr/bin/env nextflow
 dsl = "nextflow" + OneOrMore(Word(alphanums + "./[]")) + Literal("=")[...] + restOfLine # nextflow.enable.dsl = 2
 # test parameter types
 nftestURL = Suppress(Literal("file(params.test_data")) + Word(alphanums + "['-_.]") + Suppress(",") + Suppress(restOfLine)
@@ -121,11 +121,19 @@ includeTestname = Suppress(Literal("include")) + Suppress("{") + Word(srange("[A
 mapexpr = "[" + OneOrMore(Word(alphanums, alphanums + "':,_")) + "]" + Suppress(ZeroOrMore(",")) + Suppress(restOfLine) # // meta map is really annoying
 nftestcall = Word(alphas + '_') + Suppress("(") + OneOrMore((Word(alphanums + "._-") + Suppress(Literal(",")[0,1]))) + ')' + Suppress(restOfLine) #  HMMER_HMMSEARCH ( input )
 # composite components
-paramexpr = OneOrMore(Group(mapexpr))) ^ OneOrMore(nftestURL) ^ OneOrMore(realtestURL) ^  OneOrMore(paramVal)
+paramexpr = OneOrMore(Group(mapexpr)) ^ OneOrMore(nftestURL) ^ OneOrMore(realtestURL) ^  OneOrMore(paramVal)
 testparams = paramname + OneOrMore(paramexpr) + Suppress("]")
 nftestname = Group(Suppress(Literal("workflow")) + Word(alphanums + "_") + Suppress("{") +  OneOrMore(testparams) + OneOrMore(nftestcall) + Suppress("}"))
 # and all together now...
 nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + OneOrMore(includeTestname) + Group( OneOrMore(nftestname))
+print(nftest.parse_string(nftesttext))
 # that's what we have so far - will try parsing every test nf file to find all the missing bits - like stubs...
+# >>> nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + OneOrMore(includeTestname) + Group( OneOrMore(nftestname))
+# >>> print(nftest.parse_string(nftesttext))
+# [['#', '!/usr/bin/env', 'nextflow'], ['nextflow', '.enable.dsl', '=', ' 2'], 'HMMER_HMMSEARCH', [['test_hmmer_hmmsearch', 'input', ['[', "id:'test',", 'single_end:false', ']'],
+#  'https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', 'https://raw.githubusercontent.com/nf-core/test-datasets/modules/da
+# ta/delete_me/hmmer/e_coli_k12_16s.fna.gz', 'false', 'false', 'false', 'HMMER_HMMSEARCH', 'input', ')'], ['test_hmmer_hmmsearch_optional', 'input', ['[', "id:'test',", 'single_e
+# nd:false', ']'], 'https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', 'https://raw.githubusercontent.com/nf-core/test-dat
+# asets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', 'true', 'true', 'true', 'HMMER_HMMSEARCH', 'input', ')']]]
 
 
