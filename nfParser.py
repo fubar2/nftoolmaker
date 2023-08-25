@@ -52,6 +52,7 @@ workflow test_abacas {
 import sys
 import os
 from pyparsing import * # yes,  I know but that's what the package author recommends
+from pyparsing.exceptions import ParseException
 
 class nextflowParser():
 
@@ -59,27 +60,32 @@ class nextflowParser():
         """
         """
         self.testroot = "tests/modules/nf-core"
+        paramWord = Word(alphanums + "_.-'" + '"')
+        paramNameWord = Word(alphanums + "_-.")
+        optionalcomma = Suppress(Literal(",")[0,1])
         # pyparsing restOfLine is just the ticket sometimes.
         inUrls = alphanums + ":/_+[].-?&"
         # some utility DSL syntax - unsuppress it if you care
         shebang = Suppress("#" + Word(alphanums + "#!/_.") + Word(alphanums + "./") + restOfLine) # #!/usr/bin/env nextflow
         dsl = Suppress("nextflow" + OneOrMore(Word(alphanums + "./[]")) + Literal("=")[...]) + restOfLine # nextflow.enable.dsl = 2
         # test parameter types
-        nftestURL = Suppress(Literal("file(params.test_data")) + Word(alphanums + "['-_.]") + Suppress(",") + Suppress(restOfLine)
-        realtestURL = Suppress(Literal("file('")) + Word(inUrls) + Suppress("'") +  Suppress(",")[...] + Suppress(restOfLine)
-        paramVal = Word(alphanums) + Suppress(Literal(",")[0,1]) #+ Suppress(restOfLine)
-        paramname = Word(alphanums) + Suppress("=")
-        includeTestname = Suppress(Literal("include")) + Suppress("{") + Word(srange("[A-Z_]")) + Suppress("}") + Suppress(restOfLine)
-        nftestcall = Word(alphas + '_') + Suppress("(") + OneOrMore((Word(alphanums + "._-") + Suppress(Literal(",")[0,1]))) + ')' + Suppress(restOfLine) #  HMMER_HMMSEARCH ( input )
+        includetest = Suppress(Literal("include")) + Suppress("{") + Word(srange("[A-Z_]")) + Suppress("}") + Suppress(restOfLine)
+        includeTests = OneOrMore(includetest)
+        nftestURL = Suppress(Literal("file(params.test_data")) + Word(alphanums + '"' + "['-_.]") + Suppress(",")  + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")") + Suppress(restOfLine)
+        realtestURL = Suppress(Literal("file('")) + Word(inUrls) + Suppress("'") +  Suppress(",") + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + ")" + Suppress(restOfLine)
+        paramVal = paramWord + optionalcomma #+ Suppress(restOfLine)
+        paramname = paramNameWord + Suppress("=")
+        nftestcall = Word(srange("[A-Z_]")) + Suppress("(") + OneOrMore(paramNameWord + optionalcomma) + ')' + Suppress(restOfLine)
+        #  HMMER_HMMSEARCH ( input )
         # composite components
-        mapping = "["  + "[" + OneOrMore(Word(alphanums, alphanums + "':,_")) + "]" + Suppress(ZeroOrMore(",")) + Suppress(restOfLine)
-        paramexpr = OneOrMore(nftestURL) ^ OneOrMore(realtestURL) ^  OneOrMore(paramVal)
-        testparams = paramname + OneOrMore(paramexpr)
-        mapparams = paramname + mapping + ZeroOrMore(paramexpr) + Suppress("]")
-        nftestname = Group(Suppress(Literal("workflow")) + Word(alphanums + "_") + Suppress("{") +  ZeroOrMore(mapparams) +  ZeroOrMore(testparams) + OneOrMore(nftestcall) + Suppress("}"))
+        mapping = "[" + Literal(" ")[...] + "[" + OneOrMore(Word(alphanums, alphanums + "':,_")) + "]" + Suppress(restOfLine)
+        paramexpr = nftestURL | realtestURL | paramVal
+        simpleparam = paramname + paramexpr + optionalcomma
+        mapparam = paramname + mapping + OneOrMore(paramexpr + optionalcomma) + Suppress("]")
+        testbodyparams = nftestcall | mapparam | simpleparam
+        nftestname = Group(Suppress(Literal("workflow")) + Word(alphanums + "_") + Suppress("{") +  OneOrMore(testbodyparams) + Suppress("}"))
         # and all together now...
-        self.nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + OneOrMore(includeTestname) + Group(OneOrMore(nftestname))
-
+        self.nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + includeTests + Group(OneOrMore(nftestname))
         # print(nftest.parse_string(nftesttext))
         # that's what we have so far - will try parsing every test nf file to find all the missing bits - like stubs...
         # >>> nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + OneOrMore(includeTestname) + Group( OneOrMore(nftestname))
@@ -126,11 +132,13 @@ class nextflowParser():
         return parsed
 
 foo = nextflowParser()
-mod = sys.argv[1]
-scriptpath = os.path.join(foo.testroot,mod,'main.nf')
-print('scriptpath', scriptpath)
-s = open(scriptpath, 'r').read()
-print(s)
-p = foo.Parse(s)
-print(p)
+spath = sys.argv[1]
+s = open(spath, 'r').read()
+try:
+    p = foo.Parse(s)
+    print(spath, 'PARSED!')
+except:
+    print(spath, 'failed to parse')
+    sys.exit(666)
+
 
