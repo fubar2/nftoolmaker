@@ -42,18 +42,21 @@ class nextflowParser():
         """
         """
         self.testroot = "tests/modules/nf-core"
+        optionalmstart = Suppress(Literal("[")[0,1])
+        optionalmend = Suppress(Literal("]")[0,1])
+        anyquote = Suppress(Literal("'") | Literal('"'))
         paramWord = Word(alphanums + "_.-'" + '"')
         paramNameWord = Word(alphanums + "_-.")
         optionalcomma = Suppress(Literal(",")[0,1])
-        inUrls = alphanums + ":/_+[].-?&"
+        inUrls = alphanums + ":/_+[].-?&'" + '"'
         # some utility DSL syntax - unsuppress it if you care
         shebang = Suppress("#" + Word(alphanums + "#!/_.") + Word(alphanums + "./") + restOfLine) # #!/usr/bin/env nextflow
         dsl = Suppress("nextflow" + OneOrMore(Word(alphanums + "./[]")) + Literal("=")[...]) + restOfLine # nextflow.enable.dsl = 2
         # test parameter types
         includetest = Suppress(Literal("include")) + Suppress("{") + Word(srange("[A-Z_]")) + Suppress("}") + Suppress(restOfLine)
         includeTests = OneOrMore(includetest)
-        nftestURL = Suppress(Literal("file(params.test_data")) + Word(alphanums + '"' + "['-_.]") + Suppress(",")  + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")") + Suppress(restOfLine)
-        realtestURL = Suppress(Literal("file('")) + Word(inUrls) + Suppress("'") +  Suppress(",") + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + ")" + Suppress(restOfLine)
+        nftestURL = Suppress(Literal("file(params.test_data")) + Word(alphanums + '"' + "['-_.]")  + Suppress(",")  + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")")
+        realtestURL = Suppress(Literal("file(")) + Word(inUrls) +  Suppress(",") + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")")
         paramVal = paramWord + optionalcomma #+ Suppress(restOfLine)
         paramname = paramNameWord + Suppress("=")
         nftestcall = Word(srange("[A-Z_]")) + Suppress("(") + OneOrMore(paramNameWord + optionalcomma) + ')' + Suppress(restOfLine)
@@ -61,11 +64,13 @@ class nextflowParser():
         mapping = "[" + Literal(" ")[...] + "[" + OneOrMore(Word(alphanums, alphanums + "':,_")) + "]" + Suppress(restOfLine)
         paramexpr = nftestURL | realtestURL | paramVal
         simpleparam = paramname + paramexpr + optionalcomma
-        mapparam = paramname + mapping + OneOrMore(paramexpr + optionalcomma) + Suppress("]")
-        testbodyparams = nftestcall | mapparam | simpleparam
+        mapparam = paramname + mapping + OneOrMore( optionalmstart + paramexpr + optionalmend + optionalcomma) + Suppress("]")
+        testbodyparams = mapparam ^ nftestcall ^ simpleparam
         nftestname = Group(Suppress(Literal("workflow")) + Word(alphanums + "_") + Suppress("{") +  OneOrMore(testbodyparams) + Suppress("}"))
         # and all together now...
         self.nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + includeTests + Group(OneOrMore(nftestname))
+
+        #print([x for x in nftestname.scan_string(ts)])
         # print(nftest.parse_string(nftesttext))
         # that's what we have so far - will try parsing every test nf file to find all the missing bits - like stubs...
         # >>> nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + OneOrMore(includeTestname) + Group( OneOrMore(nftestname))
@@ -81,13 +86,14 @@ class nextflowParser():
         return parsed
 
 foo = nextflowParser()
-spath = sys.argv[1]
-s = open(spath, 'r').read()
-try:
-    p = foo.Parse(s)
-    print(spath, 'PARSED!')
-except:
-    print(spath, 'failed to parse')
-    sys.exit(666)
+if len(sys.argv) > 1:
+    spath = sys.argv[1]
+    s = open(spath, 'r').read()
+    try:
+        p = foo.Parse(s)
+        print(spath, 'PARSED!')
+    except:
+        print(spath, 'failed to parse')
+        sys.exit(666)
 
 
