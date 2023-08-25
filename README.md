@@ -6,9 +6,29 @@ A tool that will download and parse a github nf-core module repository, and run 
 
 The repository https://github.com/nf-core/modules/tree/master/modules/nf-core has lots of modules, described in paired files - meta.yml and main.nf. They could potentially be auto-converted into Galaxy tools by constructing a suitable command line for the ToolFactory script.
 
-## nfParser.py uses pyparsing to parse a simple test case nextflow script !
+### ~200 of ~1000 modules now parsed
 
-nfParser.py works on one hmmer test case
+
+nfParser.py uses pyparsing. parseNfTests.py will try to parse every
+found module's test and print "PARSED" if it succeeds:
+
+```
+ grep PARSED testres.txt | wc -l
+210
+(.venv) ross@pn50:~/rossgit/nftoolmaker$ wc -l testres.txt
+998 testres.txt
+```
+
+Building *should* be possible for all 200 but has not been attempted
+yet - will work through some failing test cases to find anything easily
+repaired. Sometimes a small change will make a big difference.
+
+### Jottings and notes from the process so far
+
+August 23
+
+pyparsing is the way forward for properly dealing with the nextflow DDL language in a generalisable way. The yaml is a pushover. Can now parse a test - will build up to parse the entire test.nf now. Will return all test names and their test parameters reliably to replace a lot of fragile and elaborate string hacking.
+
 
 ```
 #!/usr/bin/env nextflow
@@ -45,12 +65,6 @@ producing a pyparsing internal representation that's easy to break apart
 ```
 Might not look like much, but that's more than we need. There are stubs and other constructions to deal with but so far this only needs ~20 lines of pyparsing!!
 Mind you, those 20 lines took some considerable experimentation to get working.
-
-### Progress to date.
-
-August 23
-
-pyparsing is the way forward for properly dealing with the nextflow DDL language in a generalisable way. The yaml is a pushover. Can now parse a test - will build up to parse the entire test.nf now. Will return all test names and their test parameters reliably to replace a lot of fragile and elaborate string hacking.
 
 
 August 21
