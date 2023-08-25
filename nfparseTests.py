@@ -203,6 +203,9 @@ def tests():
 
 
 testroot = "tests/modules/nf-core"
+
+optionalmstart = Suppress(Literal("[")[0,1])
+optionalmend = Suppress(Literal("]")[0,1])
 anyquote = Suppress(Literal("'") | Literal('"'))
 paramWord = Word(alphanums + "_.-'" + '"')
 paramNameWord = Word(alphanums + "_-.")
@@ -212,23 +215,28 @@ inUrls = alphanums + ":/_+[].-?&'" + '"'
 shebang = Suppress("#" + Word(alphanums + "#!/_.") + Word(alphanums + "./") + restOfLine) # #!/usr/bin/env nextflow
 dsl = Suppress("nextflow" + OneOrMore(Word(alphanums + "./[]")) + Literal("=")[...]) + restOfLine # nextflow.enable.dsl = 2
 # test parameter types
+nftestcall = Word(srange("[A-Z_]")) + Suppress("(") + OneOrMore(paramNameWord + optionalcomma) + ')' + Suppress(restOfLine)
 includetest = Suppress(Literal("include")) + Suppress("{") + Word(srange("[A-Z_]")) + Suppress("}") + Suppress(restOfLine)
 includeTests = OneOrMore(includetest)
 nftestURL = Suppress(Literal("file(params.test_data")) + Word(alphanums + '"' + "['-_.]")  + Suppress(",")  + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")")
 realtestURL = Suppress(Literal("file(")) + Word(inUrls) +  Suppress(",") + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")")
 paramVal = paramWord + optionalcomma #+ Suppress(restOfLine)
-paramname = paramNameWord + Suppress("=")
-nftestcall = Word(srange("[A-Z_]")) + Suppress("(") + OneOrMore(paramNameWord + optionalcomma) + ')' + Suppress(restOfLine)
+bnftestURL = Suppress("[") + nftestURL + Suppress("]") + optionalcomma # for mapped parameters
+brealtestURL = Suppress("[") + realtestURL + Suppress("]") + optionalcomma
+bparamVal = Suppress("[") + paramVal + Suppress("]") + optionalcomma
+blistVal =  Suppress("[") + OneOrMore(Word(alphanums, alphanums + '"' + "':,_")) + Suppress("]")  + optionalcomma #  [ id:'test', model:'Nanopore-Dec2019' ], // meta map
+paramname = paramNameWord + Suppress("=") + NotAny("[") # hope none have [ ] around them
+mapparamname = paramNameWord + Suppress("=") + Suppress("[") # start of a possible set of [ param ]
 # composite components
-mapping = "[" + Literal(" ")[...] + "[" + OneOrMore(Word(alphanums, alphanums + "':,_")) + "]" + Suppress(restOfLine)
 paramexpr = nftestURL | realtestURL | paramVal
+mapparamexpr = bnftestURL | brealtestURL | blistVal | bparamVal | nftestURL | realtestURL | paramVal
+mapparam = mapparamname + OneOrMore(mapparamexpr) + "]" # + Suppress(restOfLine)
 simpleparam = paramname + paramexpr + optionalcomma
-mapparam = paramname + mapping + OneOrMore(paramexpr + optionalcomma) + Suppress("]")
+#mapparam = paramname + mapping + OneOrMore( paramexpr +  optionalcomma) + Suppress("]")
 testbodyparams = mapparam ^ nftestcall ^ simpleparam
 nftestname = Group(Suppress(Literal("workflow")) + Word(alphanums + "_") + Suppress("{") +  OneOrMore(testbodyparams) + Suppress("}"))
 # and all together now...
-nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + includeTests + Group(OneOrMore(nftestname))
-
+self.nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + includeTests + Group(OneOrMore(nftestname))
 # print(nftest.parse_string(nftesttext))
 # that's what we have so far - will try parsing every test nf file to find all the missing bits - like stubs...
 # >>> nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + OneOrMore(includeTestname) + Group( OneOrMore(nftestname))
