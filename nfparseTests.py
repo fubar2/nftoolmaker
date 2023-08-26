@@ -28,45 +28,16 @@ workflow test_hmmer_hmmsearch_optional {
     HMMER_HMMSEARCH ( input )
 }
 
-oh dear. this failed
+now simpler
 #!/usr/bin/env nextflow
-
 nextflow.enable.dsl = 2
-
 include { ABACAS } from '../../../../modules/nf-core/abacas/main.nf'
-
 workflow test_abacas {
-
-    input = [ [ id:'test', single_end:false ], // meta map
-              file(params.test_data['sarscov2']['illumina']['scaffolds_fasta'], checkIfExists: true)
-            ]
-
-    fasta = file(params.test_data['sarscov2']['genome']['genome_fasta'], checkIfExists: true)
-
-    ABACAS ( input, fasta )
+file(params.test_data['sarscov2']['illumina']['scaffolds_fasta'], checkIfExists: true)
+fasta = file(params.test_data['sarscov2']['genome']['genome_fasta'], checkIfExists: true)
+ABACAS ( input, fasta )
 }
 
-
-#!/usr/bin/env nextflow
-
-nextflow.enable.dsl = 2
-
-include { AMPIR } from '../../../../modules/nf-core/ampir/main.nf'
-
-workflow test_ampir {
-
-    fasta = [ [ id:'test', single_end:false ], // meta map
-              file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
-    ]
-
-    model = "precursor"
-
-    min_length = 10
-
-    min_probability = "0.7"
-
-    AMPIR ( fasta, model, min_length, min_probability )
-}
 
 """
 
@@ -203,7 +174,6 @@ def tests():
 
 
 testroot = "tests/modules/nf-core"
-
 optionalmstart = Suppress(Literal("[")[0,1])
 optionalmend = Suppress(Literal("]")[0,1])
 anyquote = Suppress(Literal("'") | Literal('"'))
@@ -221,22 +191,15 @@ includeTests = OneOrMore(includetest)
 nftestURL = Suppress(Literal("file(params.test_data")) + Word(alphanums + '"' + "['-_.]")  + Suppress(",")  + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")")
 realtestURL = Suppress(Literal("file(")) + Word(inUrls) +  Suppress(",") + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")")
 paramVal = paramWord + optionalcomma #+ Suppress(restOfLine)
-bnftestURL = Suppress("[") + nftestURL + Suppress("]") + optionalcomma # for mapped parameters
-brealtestURL = Suppress("[") + realtestURL + Suppress("]") + optionalcomma
-bparamVal = Suppress("[") + paramVal + Suppress("]") + optionalcomma
-blistVal =  Suppress("[") + OneOrMore(Word(alphanums, alphanums + '"' + "':,_")) + Suppress("]")  + optionalcomma #  [ id:'test', model:'Nanopore-Dec2019' ], // meta map
-paramname = paramNameWord + Suppress("=") + NotAny("[") # hope none have [ ] around them
-mapparamname = paramNameWord + Suppress("=") + Suppress("[") # start of a possible set of [ param ]
+paramname = paramNameWord + Suppress("=") #+ NotAny("[") # hope none have [ ] around them
 # composite components
 paramexpr = nftestURL | realtestURL | paramVal
-mapparamexpr = bnftestURL | brealtestURL | blistVal | bparamVal | nftestURL | realtestURL | paramVal
-mapparam = mapparamname + OneOrMore(mapparamexpr) + "]" # + Suppress(restOfLine)
 simpleparam = paramname + paramexpr + optionalcomma
-#mapparam = paramname + mapping + OneOrMore( paramexpr +  optionalcomma) + Suppress("]")
-testbodyparams = mapparam ^ nftestcall ^ simpleparam
+testbodyparams = nftestcall ^ simpleparam
 nftestname = Group(Suppress(Literal("workflow")) + Word(alphanums + "_") + Suppress("{") +  OneOrMore(testbodyparams) + Suppress("}"))
 # and all together now...
-self.nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + includeTests + Group(OneOrMore(nftestname))
+nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + includeTests + Group(OneOrMore(nftestname))
+
 # print(nftest.parse_string(nftesttext))
 # that's what we have so far - will try parsing every test nf file to find all the missing bits - like stubs...
 # >>> nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + OneOrMore(includeTestname) + Group( OneOrMore(nftestname))
@@ -254,4 +217,4 @@ if len(sys.argv) > 1:
     p = nftest.parse_string(nftesttext)
     print(p)
 else:
-    tests()
+    print('nothing on nfcommandline') #tests()

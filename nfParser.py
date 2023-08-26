@@ -73,10 +73,93 @@ ABACAS ( input, fasta )
     def simplifyTest(self, script):
         """
         remove junk like        [ id:'test', single_end:false ], // meta map
+        and take care of single parameters with gratuitous brackets and groups of parameters in brackets that need to all be renamed
+        for each 'workflow' segement ending in }, find the very last ] and deal with each parameter symbol in between that has an = after it.
+
+Some test cases
+    input = [
+        [ id:'test', single_end:false ], // meta map
+        [
+            file(params.test_data['homo_sapiens']['illumina']['test2_genome_vcf'], checkIfExists: true),
+            file(params.test_data['homo_sapiens']['illumina']['test_genome_vcf'], checkIfExists: true)
+        ]
+    ]
+
+   input = [
+        [ id:'test', single_end:false ], // meta map
+        file('https://github.com/nf-core/test-datasets/raw/a7e61654553887475a2f7178108587ecd9b54608/data/delete_me/malt/test.rma6', checkIfExists: true)
+    ]
+
+workflow test_picard_liftovervcf_stubs {
+input_vcf = [ [ id:'test' ],
+file(params.test_data['homo_sapiens']['genome']['genome_chain_gz'], checkIfExists: true)
+]
+dict = [ [ id:'genome' ],
+file(params.test_data['homo_sapiens']['genome']['genome_dict'], checkIfExists: true)
+]
+chain = [ [ id:'genome' ],
+file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true)
+]
+fasta = [ [ id:'genome' ],
+file(params.test_data['homo_sapiens']['genome']['genome_fasta'], checkIfExists: true)
+]
+PICARD_LIFTOVERVCF ( input_vcf, dict, fasta, chain )
+}
+
+
         """
+
+        def stringToBalancing(ltarget, rtarget, s, indx):
+            """
+            in s, at i. targets might be []
+            if see an isolated rtarget, increase unbalanced
+            if see an isolated ltarget, append substring and decrease unbalanced
+            increment i until s[i] == ']' and unbalanced==0 or end
+            maybe a recursive generator for subelements
+            """
+            unbalanced = 0
+            lens = len(s)
+            i = indx
+            subexpr = []
+            thisexpr = []
+            while i < lens:
+                i += 1
+                if s[i] not in [rtarget, ltarget]:
+                    thisexpr(append(s[i]))
+                    i += 1
+                elif s[i] == rtarget: # end or new subexpression
+                    unbalanced -= 1 # one less to find before balance
+                    if len(thisexpr) == 0: # edge case of None for a parameter = []
+                        yield "None"
+                    else:
+                        y = thisexpr
+                        thisexpr = []
+                        yield ' '.join(y)
+                else: # must be new sublist = ltarget
+                    subex = stringToBalancing(ltarget, rtarget, s, indx)
+                    subexpr.append(subex)
+
+
+        def removeComments(s)
+            news = []
+            ss = s.split('\n')
+            for i, row in enumerate(ss):
+                if "//" in ss:
+                    wor = rows[::-1]
+                    print(wor)
+                    wor = wor.split("//",1)[1] # break at last one in case http:
+                    res = ' '.join(wor[::-1])
+                    news.append(res)
+                else:
+                    news.append(' '.join(row))
+            return '\n'.join(news)
+
+
+    def oldsimplifyTest(self, sscript):
         news = []
         skipNextrbracket = False
         tpname = None
+        script = removeComments(sscript)
         ss = script.split('\n')
         for i,row in enumerate(ss):
             if len(row.strip()) > 0:
@@ -104,18 +187,19 @@ ABACAS ( input, fasta )
         print(newss)
         return newss
 
-    def Parse(self, s):
+    def Parse(self, s, modname):
         ss = self.simplifyTest(s)
-        print('ss=', ss)
+        print("modname=", modname, "\ns=", s, '\nss=', ss,"******************\n")
         parsed = self.nftest.parse_string(ss)
         return parsed
 
 foo = nextflowParser()
 if len(sys.argv) > 1:
     spath = sys.argv[1]
+    modname = os.path.split(spath)[1]
     s = open(spath, 'r').read()
     try:
-        p = foo.Parse(s)
+        p = foo.Parse(s, modname)
         print(spath, 'PARSED!')
     except:
         print(spath, 'failed to parse')
