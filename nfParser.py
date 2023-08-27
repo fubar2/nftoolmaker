@@ -5,18 +5,182 @@
 nftesttext = """
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
-include { ABACAS } from '../../../../modules/nf-core/abacas/main.nf'
-workflow test_abacas {
-file(params.test_data['sarscov2']['illumina']['scaffolds_fasta'], checkIfExists: true)
-fasta = file(params.test_data['sarscov2']['genome']['genome_fasta'], checkIfExists: true)
-ABACAS ( input, fasta )
+include { HMMER_HMMSEARCH } from '../../../../../modules/nf-core/hmmer/hmmsearch/main.nf'
+workflow test_hmmer_hmmsearch {
+    input = [
+        [ id:'test', single_end:false ], // meta map
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true),
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', checkIfExists: true),
+        false,
+        false,
+        false
+    ]
+    HMMER_HMMSEARCH ( input )
 }
-"""
+workflow test_hmmer_hmmsearch_optional {
+    input = [
+        [ id:'test', single_end:false ], // meta map
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true),
+        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', checkIfExists: true),
+        true,
+        true,
+        true
+    ]
+    HMMER_HMMSEARCH ( input )
+}
 
+"""
 
 import sys
 import os
 from pyparsing import * # yes,  I know but that's what the package author recommends
+
+class cleanUpTests():
+    """
+    remove junk like        [ id:'test', single_end:false ], // meta map
+    and take care of single parameters with gratuitous brackets and groups of parameters in brackets that need to all be renamed
+    for each 'workflow' segement ending in }, find the very last ] and deal with each parameter symbol in between that has an = after it.
+    """
+
+    def __init__(self, script):
+        """
+        """
+        self.simplified = None
+        nestedItems = nestedExpr("[", "]")
+        self.nested = OneOrMore(Word(alphanums + "_") + "=" + Group(originalTextFor(nestedItems)))
+        s = self.removeComments(script)
+        ss = s.split('\n') # parse as rows - punt!
+        tnames = []
+        ttexts = []
+        indx = 0
+        tlen = len(ss)
+        print(tlen)
+        while indx < tlen:
+            row = ss[indx]
+            rows = row.split()
+            indx += 1
+            if rows[0] == "workflow": # find the name and {
+                tname = rows[1]
+                if len(rows) > 3:
+                    thistext = [' '.join(rows[3:])]
+                else:
+                    thistext = []
+                tnames.append(tname)
+                noend = True
+                while noend and indx < tlen:
+                    row = ss[indx]
+                    indx += 1
+                    rows = row.split()
+                    if "}" in rows:
+                        rbi = rows.index("}")
+                        rows[rbi] = "\n}"
+                        noend = False
+                    else:
+                        thistext += rows
+
+                simpler = self.oneTest(thistext)
+                print('++++++++++++++simpler:', simpler)
+                ttexts.append("workflow %s {\n%s\n" %(tname, simpler))
+            else:
+                ttexts.append(row) # neutral fluff
+        self.simplified = '\n'.join(ttexts)
+
+    def oneTest(self, tokelist):
+        """
+        deal with a single workflow foo { } segment
+0 ['input_vcf', '=', "[ [ id:'test' ], file(params.test_data['homo_sapiens']['genome']['genome_chain_gz'], checkIfExists: true) ]"]
+1 ['dict', '=', "[ [ id:'genome' ], file(params.test_data['homo_sapiens']['genome']['genome_dict'], checkIfExists: true), file('https://testcaseraw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true) ]"]
+2 ['chain', '=', "[ [ id:'genome' ], file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true) ]"]
+3 ['fasta', '=', "[ [ id:'genome' ], file(params.test_data['homo_sapiens']['genome']['genome_fasta'], checkIfExists: true) ]"]
+
+        """
+        s = ' '.join(tokelist)
+        # afterlastbracket = len(s) -s[::-1].index('(')
+        # tail = s[(afterlastbracket - 2):]
+        # head = s[:(afterlastbracket - 4)]
+        # print('\n***head', head, '\ntail', tail)
+        paramNameWord = Word(alphanums + "_-.")
+        nftestcall = Word(srange("[A-Z_]")) + Suppress("(") + OneOrMore(paramNameWord + ZeroOrMore(",")) + ')' + Suppress(restOfLine)
+        useless =  Suppress(Literal('checkIfExists:') | Literal('true)') + ZeroOrMore(",") | nftestcall)
+        gobbledegook = OneOrMore(Word(alphanums + ":-_'") + ZeroOrMore(","))
+        badmeta = Suppress( OneOrMore("[") + gobbledegook + SkipTo("]") + OneOrMore("]") + ZeroOrMore(","))
+        badbracket = Suppress("]")
+        good = Word(printables)
+        cleanmeta = OneOrMore(badmeta | badbracket | useless | good)
+        #simpler = self.nested.parseString(head)
+        simpler = cleanmeta.parseString(s).asList()
+        print('raw', simpler)
+        #simpler = [str(x) for x in simpler]
+        print('### simpler', simpler)
+        #clean = self.nested.parseString(simpler)#hmmm
+        #print('### clean!:', clean)
+        res = []
+        nrow = len(simpler)
+        i =1
+        while i < nrow:
+            thing = simpler[i]
+            if thing == "=":
+                pname = simpler[i-1]
+                if simpler[i+1].startswith('file('):
+                    term = "%s = %s)" % (pname, simpler[i+1].replace(",", ''))
+                else:
+                    term = "%s = %s" % (pname, thing)
+                res.append(term)
+                i += 2
+            else:
+                if i < (nrow -2) and (simpler[i+1] == "="):
+                    pname = simpler[i]
+                    i += 1
+                else:
+                    if thing.startswith('file('):
+                        term = '%s%d = %s)' % (pname, i, thing)
+                    else:
+                        term = '%s%d = %s' % (pname, i, thing)
+                    res.append(term)
+                    i += 1
+        simpler = ' \n'.join(res)
+        print('simpler:', simpler)
+        return simpler
+
+    def removeComments(self, s):
+        ss = s.split("\n")
+        ss = [x.strip() for x in ss if len(x.strip()) > 0]
+        news = []
+        for i, row in enumerate(ss):
+            rows = row.split()
+            if "//" in rows:
+                wor = row[::-1]
+                wor = wor.split("//", 1)[1]  # break at last one in case http:
+                res = wor[::-1]
+                news.append(res)
+            else:
+                news.append(row)
+        return '\n'.join(news) # string
+
+    def test(self):
+        """
+        """
+        s1 = """
+workflow test_picard_liftovervcf_stubs {
+input_vcf = [ [ id:'test' ],
+file(params.test_data['homo_sapiens']['genome']['genome_chain_gz'], checkIfExists: true)
+]
+dict = [ [ id:'genome' ],
+file(params.test_data['homo_sapiens']['genome']['genome_dict'], checkIfExists: true),
+file('https://testcaseraw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true)
+]
+chain = [ [ id:'genome' ],
+file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true)
+]
+fasta = [ [ id:'genome' ],
+file(params.test_data['homo_sapiens']['genome']['genome_fasta'], checkIfExists: true)
+]
+PICARD_LIFTOVERVCF ( input_vcf, dict, fasta, chain )
+}
+        """
+        simp = cleanUpTests(s)
+        print("@@@@",simp.simplified)
+
 
 
 class nextflowParser():
@@ -26,10 +190,8 @@ class nextflowParser():
         now much simpler with prefiltering
         """
         self.testroot = "tests/modules/nf-core"
-        optionalmstart = Suppress(Literal("[")[0,1])
-        optionalmend = Suppress(Literal("]")[0,1])
         anyquote = Suppress(Literal("'") | Literal('"'))
-        paramWord = Word(alphanums + "_.-'" + '"')
+        paramWord = Word(alphanums + "+=_.-'" + '"')
         paramNameWord = Word(alphanums + "_-.")
         optionalcomma = Suppress(Literal(",")[0,1])
         inUrls = alphanums + ":/_+[].-?&'" + '"'
@@ -40,13 +202,13 @@ class nextflowParser():
         nftestcall = Word(srange("[A-Z_]")) + Suppress("(") + OneOrMore(paramNameWord + optionalcomma) + ')' + Suppress(restOfLine)
         includetest = Suppress(Literal("include")) + Suppress("{") + Word(srange("[A-Z_]")) + Suppress("}") + Suppress(restOfLine)
         includeTests = OneOrMore(includetest)
-        nftestURL = Suppress(Literal("file(params.test_data")) + Word(alphanums + '"' + "['-_.]")  + Suppress(",")  + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")")
+        nftestURL = Suppress(Literal("file(params.test_data")) + Word(alphanums + '"' + "['-_.]")  + Suppress(ZeroOrMore(")"))
         realtestURL = Suppress(Literal("file(")) + Word(inUrls) +  Suppress(",") + Suppress(ZeroOrMore(Word(alphanums + ":_.-"))) + Suppress(")")
         paramVal = paramWord + optionalcomma #+ Suppress(restOfLine)
-        paramname = paramNameWord + Suppress("=") #+ NotAny("[") # hope none have [ ] around them
+        paramname = paramNameWord + Suppress("=")
         # composite components
         paramexpr = nftestURL | realtestURL | paramVal
-        simpleparam = paramname + paramexpr + optionalcomma
+        simpleparam = OneOrMore(paramname + paramexpr)
         testbodyparams = nftestcall ^ simpleparam
         ts = """workflow test_abacas {
 tpname1 = file(params.test_data['sarscov2']['illumina']['scaffolds_fasta'], checkIfExists: true)
@@ -55,7 +217,7 @@ ABACAS ( input, fasta )
 }
         """
         #OneOrMore(testbodyparams).parse_string(ts)
-        nftestname = Group(Suppress(Literal("workflow")) + Word(alphanums + "_") + Suppress("{") +  OneOrMore(testbodyparams) + Suppress("}"))
+        nftestname = Group(Suppress(Literal("workflow")) + Word(alphanums + "_") + Suppress("{") +  OneOrMore(testbodyparams) + Suppress(ZeroOrMore("}")))
         # and all together now...
         self.nftest = ZeroOrMore(Group(shebang)) + ZeroOrMore(Group(dsl)) + includeTests + Group(OneOrMore(nftestname))
         #print(self.nftest.parse_string(nftesttext))
@@ -70,126 +232,12 @@ ABACAS ( input, fasta )
         # nd:false', ']'], 'https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', 'https://raw.githubusercontent.com/nf-core/test-dat
         # asets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', 'true', 'true', 'true', 'HMMER_HMMSEARCH', 'input', ')']]]
 
-    def simplifyTest(self, script):
-        """
-        remove junk like        [ id:'test', single_end:false ], // meta map
-        and take care of single parameters with gratuitous brackets and groups of parameters in brackets that need to all be renamed
-        for each 'workflow' segement ending in }, find the very last ] and deal with each parameter symbol in between that has an = after it.
 
-Some test cases
-    input = [
-        [ id:'test', single_end:false ], // meta map
-        [
-            file(params.test_data['homo_sapiens']['illumina']['test2_genome_vcf'], checkIfExists: true),
-            file(params.test_data['homo_sapiens']['illumina']['test_genome_vcf'], checkIfExists: true)
-        ]
-    ]
-
-   input = [
-        [ id:'test', single_end:false ], // meta map
-        file('https://github.com/nf-core/test-datasets/raw/a7e61654553887475a2f7178108587ecd9b54608/data/delete_me/malt/test.rma6', checkIfExists: true)
-    ]
-
-workflow test_picard_liftovervcf_stubs {
-input_vcf = [ [ id:'test' ],
-file(params.test_data['homo_sapiens']['genome']['genome_chain_gz'], checkIfExists: true)
-]
-dict = [ [ id:'genome' ],
-file(params.test_data['homo_sapiens']['genome']['genome_dict'], checkIfExists: true)
-]
-chain = [ [ id:'genome' ],
-file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true)
-]
-fasta = [ [ id:'genome' ],
-file(params.test_data['homo_sapiens']['genome']['genome_fasta'], checkIfExists: true)
-]
-PICARD_LIFTOVERVCF ( input_vcf, dict, fasta, chain )
-}
-
-
-        """
-
-        def stringToBalancing(ltarget, rtarget, s, indx):
-            """
-            in s, at i. targets might be []
-            if see an isolated rtarget, increase unbalanced
-            if see an isolated ltarget, append substring and decrease unbalanced
-            increment i until s[i] == ']' and unbalanced==0 or end
-            maybe a recursive generator for subelements
-            """
-            unbalanced = 0
-            lens = len(s)
-            i = indx
-            subexpr = []
-            thisexpr = []
-            while i < lens:
-                i += 1
-                if s[i] not in [rtarget, ltarget]:
-                    thisexpr(append(s[i]))
-                    i += 1
-                elif s[i] == rtarget: # end or new subexpression
-                    unbalanced -= 1 # one less to find before balance
-                    if len(thisexpr) == 0: # edge case of None for a parameter = []
-                        yield "None"
-                    else:
-                        y = thisexpr
-                        thisexpr = []
-                        yield ' '.join(y)
-                else: # must be new sublist = ltarget
-                    subex = stringToBalancing(ltarget, rtarget, s, indx)
-                    subexpr.append(subex)
-
-
-        def removeComments(s)
-            news = []
-            ss = s.split('\n')
-            for i, row in enumerate(ss):
-                if "//" in ss:
-                    wor = rows[::-1]
-                    print(wor)
-                    wor = wor.split("//",1)[1] # break at last one in case http:
-                    res = ' '.join(wor[::-1])
-                    news.append(res)
-                else:
-                    news.append(' '.join(row))
-            return '\n'.join(news)
-
-
-    def oldsimplifyTest(self, sscript):
-        news = []
-        skipNextrbracket = False
-        tpname = None
-        script = removeComments(sscript)
-        ss = script.split('\n')
-        for i,row in enumerate(ss):
-            if len(row.strip()) > 0:
-                rows = row.split()
-                if rows[0] == "]" and skipNextrbracket:
-                    skipNextrbracket = False
-                elif "//" in rows: # hope they always use a space otherwise https:// is a problem?
-                    if "id:'test'," in rows:
-                        skipNextrbracket = True ## this leaves nameless parameters
-                        tpname = rows[0] # first name
-                        nparam = 1
-                    else:
-                        wor = rows[::-1]
-                        print(wor)
-                        wor = wor.split("//",1)[1] # break at last one in case http:
-                        res = ' '.join(wor[::-1])
-                        news.append(res)
-                else:
-                    if skipNextrbracket:
-                        rows.insert(0, "=")
-                        rows.insert(0, 'tpname%d' % nparam)
-                        nparam += 1
-                    news.append(' '.join(rows))
-        newss = '\n'.join(news)
-        print(newss)
-        return newss
 
     def Parse(self, s, modname):
-        ss = self.simplifyTest(s)
-        print("modname=", modname, "\ns=", s, '\nss=', ss,"******************\n")
+        cleaner = cleanUpTests(s)
+        ss = cleaner.simplified
+        print("modname=", modname, "\ns=", s, '\nss=', ss)
         parsed = self.nftest.parse_string(ss)
         return parsed
 
@@ -198,13 +246,14 @@ if len(sys.argv) > 1:
     spath = sys.argv[1]
     modname = os.path.split(spath)[1]
     s = open(spath, 'r').read()
-    try:
-        p = foo.Parse(s, modname)
-        print(spath, 'PARSED!')
-    except:
-        print(spath, 'failed to parse')
-        sys.exit(666)
+    p = foo.Parse(s, modname)
+    print(p)
+    # try:
+        # p = foo.Parse(s, modname)
+        # print(spath, 'PARSED!')
+    # except:
+        # print(spath, 'failed to parse')
+        # sys.exit(666)
 else:
-    print('no parameter')
-
-
+    foo = cleanUpTests(nftesttext)
+    print("Cleaned test case=",foo.simplified)
