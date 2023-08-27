@@ -6,7 +6,19 @@ A tool that will download and parse a github nf-core module repository, and run 
 
 The repository https://github.com/nf-core/modules/tree/master/modules/nf-core has lots of modules, described in paired files - meta.yml and main.nf. They could potentially be auto-converted into Galaxy tools by constructing a suitable command line for the ToolFactory script.
 
-### ~200 of ~1000 modules now parsed
+## currently parsing 613 tests but failing 384.
+Failed tests texts are collected into a text file so can look for
+themes.
+
+Adding a preprocessing step has really helped.
+Nesting can be decomposed but it is a hydra so will take some more work
+to deal with the remaining 1/3
+
+### Jottings and notes from the process so far
+
+August 25
+
+~200 of ~1000 modules now parsed
 
 
 nfParser.py uses pyparsing. parseNfTests.py will try to parse every
@@ -23,7 +35,7 @@ Building *should* be possible for all 200 but has not been attempted
 yet - will work through some failing test cases to find anything easily
 repaired. Sometimes a small change will make a big difference.
 
-### Jottings and notes from the process so far
+
 
 August 23
 

@@ -79,7 +79,7 @@ class cleanUpTests():
                         thistext += rows
 
                 simpler = self.oneTest(thistext)
-                print('++++++++++++++simpler:', simpler)
+                # print('++++++++++++++simpler:', simpler)
                 ttexts.append("workflow %s {\n%s\n" %(tname, simpler))
             else:
                 ttexts.append(row) # neutral fluff
@@ -109,9 +109,9 @@ class cleanUpTests():
         cleanmeta = OneOrMore(badmeta | badbracket | useless | good)
         #simpler = self.nested.parseString(head)
         simpler = cleanmeta.parseString(s).asList()
-        print('raw', simpler)
+        #print('raw', simpler)
         #simpler = [str(x) for x in simpler]
-        print('### simpler', simpler)
+        #print('### simpler', simpler)
         #clean = self.nested.parseString(simpler)#hmmm
         #print('### clean!:', clean)
         res = []
@@ -139,7 +139,7 @@ class cleanUpTests():
                     res.append(term)
                     i += 1
         simpler = ' \n'.join(res)
-        print('simpler:', simpler)
+        #print('simpler:', simpler)
         return simpler
 
     def removeComments(self, s):
@@ -237,7 +237,7 @@ ABACAS ( input, fasta )
     def Parse(self, s, modname):
         cleaner = cleanUpTests(s)
         ss = cleaner.simplified
-        print("modname=", modname, "\ns=", s, '\nss=', ss)
+        # print("modname=", modname, "\ns=", s, '\nss=', ss)
         parsed = self.nftest.parse_string(ss)
         return parsed
 
@@ -246,14 +246,12 @@ if len(sys.argv) > 1:
     spath = sys.argv[1]
     modname = os.path.split(spath)[1]
     s = open(spath, 'r').read()
-    p = foo.Parse(s, modname)
-    print(p)
-    # try:
-        # p = foo.Parse(s, modname)
-        # print(spath, 'PARSED!')
-    # except:
-        # print(spath, 'failed to parse')
-        # sys.exit(666)
+    try:
+        p = foo.Parse(s, modname)
+        print(spath, 'PARSED!')
+    except:
+        print(spath, 'failed to parse', s, "boohoo" )
+        sys.exit(666)
 else:
     foo = cleanUpTests(nftesttext)
     print("Cleaned test case=",foo.simplified)
