@@ -34,6 +34,7 @@ import galaxyxml.tool.parameters as gxtp
 
 import lxml.etree as ET
 
+from nfParser import  nextflowParser
 from toolfactoryclass import Tool_Factory
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,7 @@ class ParseNFMod:
     """
 
     def __init__(self, nft, nfy, args):
+        self.tparser = nextflowParser()
         self.chainedtestout = 'chainedtests.xls'
         f = open(self.chainedtestout,'w')
         f.close()
@@ -69,7 +71,7 @@ class ParseNFMod:
         self.nfyaml = nfy
         self.args = args
         self.localTestFile =  "nfgenomicstestdata.txt"
-        self.setTestFiles()
+        self.setTestFiles() # setup crosswalk for test downloads
         self.tfcl = ["--parampass", "embednfmod"]
         self.inparamnames = []
         self.outparamnames = []
@@ -125,9 +127,6 @@ class ParseNFMod:
         self.makePackages(self.getlinestart("conda"))
         self.tfcl += self.cl_coda
         self.tfcl = [x for x in self.tfcl if x.strip() > ""]
-
-
-
 
     def setTestFiles(self):
         td = open(self.localTestFile, "r").readlines()
@@ -312,7 +311,13 @@ workflow test_hmmer_eslreformat_afa {
             testything = "tests/modules/nf-core/%s/main.nf" % self.tool_name
         if os.path.exists(testything):
             nftesttext = open(testything, "r").read()
-            self.nfParseTests(nftesttext)
+            try:
+                self.testparams = self.tparser.Parse(nftesttext, self.toolname)
+                print(spath, 'PARSED!')
+                self.testok = True
+            except:
+                print(spath, 'failed to parse', s, "boohoo" )
+                self.testok = False
             # produces self.nftests - dict  {"tname" : tname, "tparamnames":tparamnames, "tparamvalues":tparamvalues}
         else:
             nftest = None
