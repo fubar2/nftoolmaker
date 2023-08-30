@@ -34,7 +34,7 @@ import galaxyxml.tool.parameters as gxtp
 
 import lxml.etree as ET
 
-from nfParser import  nextflowParser
+from nfParser import  cleanUpTests
 from toolfactoryclass import Tool_Factory
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 """
 FILTERCHARS = "[]{}'"
 
+debug = False
 
 class ParseNFMod:
     """
@@ -54,7 +55,8 @@ class ParseNFMod:
     """
 
     def __init__(self, nft, nfy, args):
-        self.tparser = nextflowParser()
+        self.canTest = True # build even if false?
+        self.testParamList = None
         self.chainedtestout = 'chainedtests.xls'
         f = open(self.chainedtestout,'w')
         f.close()
@@ -66,7 +68,6 @@ class ParseNFMod:
         os.makedirs(self.tool_dir, exist_ok=True)
         os.makedirs(self.tooltest_dir, exist_ok=True)
         self.scriptPrefixSubs = {}
-        self.nfTests = [] # will ignore multiples but collect all
         self.nftext = nft
         self.nfyaml = nfy
         self.args = args
@@ -83,11 +84,10 @@ class ParseNFMod:
                 self.inparamnames.append(pname)
         self.inparamcount = len(self.inparamnames) # needed to select a test using them all - bugger anything else - too hard to match up names
         self.getTestInfo()
-        self.usetest = self.nfTests[0]
-        for i, t in enumerate(self.nfTests): # self.nfTests.append([tname, tparamnames, tparamvalues])
-            if len(t[1]) == self.inparamcount:
-                self.usetest = t
-                break
+        self.usetest = self.testParamList[0]
+        if self.inparamcount != len(self.usetest):
+            print("### inparamcount = ", self.inparamcount, 'but there are', len(self.usetest), 'test parameters in the first of', self.testParamList)
+            self.canTest = False
         self.makeMeta()
         stub = self.getsection("stub:")  # not all have these - no idea what they're for
         indx = 0
@@ -97,21 +97,14 @@ class ParseNFMod:
             if ptype == "map":
                 print("Ignoring map specified as input %s" % str(inpdict))
             elif ptype == "file":
-                (tname, tparamnames, tparamvalues) = self.usetest
                 print('############ tests=', self.usetest, 'pname',pname, 'i', indx, 'inpdict', inpdict, 'inparamnames', self.inparamnames)
-                realindex =  self.inparamnames.index(pname)
-                localfile = tparamvalues[realindex] # we hope...
-                self.makeInfile(inpdict,indx, localfile)
-                indx += 1
+                self.makeInfile(inpdict,indx)
             elif ptype == "string":
                 self.makeString(inpdict, indx)
-                indx += 1
             elif ptype == "val":
                 self.makeFlag(inpdict, indx)
-                indx += 1
             elif ptype in ["number", "integer"]:
                 self.makeNum(inpdict, indx)
-                indx += 1
             else:
                 print("### unknown input type encountered in %s" % str(inpdict))
         for inpdict in nfy["output"]:
@@ -146,37 +139,38 @@ class ParseNFMod:
         self.file_dict = file_dict
 
 
-    def nfParseTests(self, nftesttext):
+    def getTestInfo(self):
+        """ read tests and parse into a list of sets of params using nfParser
         """
-        extract test parameters from the test nf text
-    shlex.split(shite)
+        self.setTestFiles()
+        if '_' in self.tool_name: # ridiculous hack for multi tool modules
+            submod = self.tool_name.replace('_','/') # punt
+            testything = "tests/modules/nf-core/%s/main.nf" % submod
+        else:
+            testything = "tests/modules/nf-core/%s/main.nf" % self.tool_name
+        if os.path.exists(testything):
+            nftesttext = open(testything, "r").read()
+            clean = cleanUpTests(nftesttext)
+            tests = clean.simplified
+            print(testything, 'PARSED! =', tests)
+            self.testok = True
+            self.testParamList = tests
+        else:
+            nftest = None
+            print(
+                "#### bad news - no test data because testything",
+                testything,
+                "not found",
+            )
 
-    ['#!/usr/bin/env', 'nextflow', 'nextflow.enable.dsl', '=', '2', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_NO_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'include', '{', 'SURVIVOR_FILTER', 'as', 'SURVIVOR_FILTER_BED}', 'from', '../../../../../modules/nf-core/survivor/filter/main.nf', 'workflow', 'test_survivor_filter_no_bed', '{', 'input_no_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', '[]', ']', 'SURVIVOR_FILTER_NO_BED', '(', 'input_no_bed,', '51,', '10001,', '0.01,', '10', ')', '}', 'workflow', 'test_survivor_filter', '{', 'input_bed', '=', '[', '[', 'id:test],', '//', 'meta', 'map', 'file(params.test_data[homo_sapiens][illumina][test_genome_vcf],', 'checkIfExists:', 'true),', 'file(params.test_data[homo_sapiens][genome][genome_bed],', 'checkIfExists:', 'true)', ']', 'SURVIVOR_FILTER_BED', '(', 'input_bed,', '51,', '10001,', '0.01,', '10', ')', '}']
-
-    includes have an alternative form - ['include', '{', 'AMPIR', '}', 'from']
-['#!/usr/bin/env', 'nextflow', 'nextflow.enable.dsl', '=', '2', 'include', '{', 'AMPIR', '}', 'from', '../../../../modules/nf-core/ampir/main.nf', 'workflow', 'test_ampir', '{', 'fasta', '=', '[', '[', 'id:test,', 'single_end:false', '],', '//', 'meta', 'map', 'file(params.test_data[candidatus_portiera_aleyrodidarum][genome][proteome_fasta],', 'checkIfExists:', 'true),', ']', 'model', '=', 'precursor', 'min_length', '=', '10', 'min_probability', '=', '0.7', 'AMPIR', '(', 'fasta,', 'model,', 'min_length,', 'min_probability', ')', '}']
-
-
-    keywords - cannot assume linestart.
-    "include",
-    "workflow"
-    modname.uppercase()
-
-    includes contain the workflow test names
-    workflow { to } has the test file and test name to match up
-    Inside the workflow the workflow name signals a section with parameter names to use in order inside parentheses.
-
-    TODO make sure localpath is test-data and matches the test parameter name
-
+    def fixTDPath(self, p):
         """
-        def getTestdataPath(indx, w):
-            tparam = w[indx]
-            while not w[indx].startswith('file(') and not w[indx] in ["}", "]"]:
-                 indx += 1
-            #  file(params.test_data['candidatus_portiera_aleyrodidarum']['genome']['proteome_fasta'], checkIfExists: true),
-            if w[indx].startswith('file(param'):
+        replace file paths with real urls
+        """
+        res = []
+        if p.startswith('file(param'):
                 testfpath = (
-                    w[indx].split("[", 1)[1]
+                    p.split("[", 1)[1]
                     .split(",")[0]
                     .replace("][", "/")
                     .replace("'", "")
@@ -194,138 +188,16 @@ class ParseNFMod:
                         testfpath,
                         "not found in directory of the test repository. Please run the updater",
                     )
-                    sys.exit(3)
-                foundpath = self.testURLprefix + foundpaths[0]
-            else: #'file(https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz,'
-                foundpath = w[indx].replace('file(','').replace(',','').replace(')','')
-            return (indx, foundpath)
-
-        def parseATest(w, testNames):
-            """
-            split into bits - test file, test name, test parameter values for each test
-
-            if comma separators between the start and end ], split and give all the same name - it has no meaning as everything's positional here
-
-             input = [
-        [ id:'test', single_end:false ], // meta map
-        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz', checkIfExists: true),
-        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz', checkIfExists: true),
-        false,
-        false,
-        false
-    ]
-
-     otherwise perhaps build the list by appending from individual =
-
-workflow test_hmmer_eslreformat_afa {
-
-    input = [
-        [ id:'test' ], // meta map
-        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/e_coli_k12_16s.fna.gz')      // Change to params.test_data syntax after the data is included in ./tests/config/test_data.config
-    ]
-
-    hmm   = file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz')
-
-    HMMER_HMMALIGN ( input, hmm )
-
-    HMMER_ESLREFORMAT_AFA ( HMMER_HMMALIGN.out.sthlm )
-}
-
-
-            """
-            tname = w[0]
-            tparamvalues = [] # indexed by test param name k
-            indx = 0
-            lw = len(w)
-            while indx < lw:
-                if w[indx] in testNames: # is a test command line at end
-                    indx += 2
-                    tparamnames = []
-                    while not w[indx] == ")" and not w[indx] == "}":
-                        tparamnames.append(w[indx].replace(',','')) # shlex...
-                        indx += 1
-                elif indx < (lw -1) and w[indx+1] == "=": # start of a test parameter
-                    pname = w[indx].replace(',','') # shlex...
-                    indx += 1
-                    if w[indx+1] == "[": # mapping start - often a single file parameter but could be a simple comma separated list
-                        mess = []
-                        while indx < lw and w[indx] != "]": # brittle - last is alone whereas mapping ends are usually "]," in shlex
-                            mess.append(w[indx]
-                            indx += 1
-
-                        (indx, v) = getTestdataPath(indx, w)
-                        indx += 1
-                    else:
-                        v = w[indx+1].strip() # simples
-                        if v.startswith('file('):
-                            v = v.replace('file(','').replace(')','')
-                        indx += 2
-                        tparamvalues.append(v)
+                    self.canTest = False
+                    foundpath = p
                 else:
-                    indx += 1
-            return (tname, tparamnames, tparamvalues)
+                    foundpath = self.testURLprefix + foundpaths[0]
+        else: #'file(https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz,'
+            foundpath = p.replace('file(','').replace(',','').replace(')','')
+        if debug:
+            print('fixTDPath returning', foundpath)
+        return foundpath
 
-        kw = ["include", "workflow"]
-        nfshlex = shlex.split(nftesttext)
-        testNames = []
-        nfwf = []
-        ne = len(nfshlex)
-        indx = 0
-        while indx < ne:
-            e = nfshlex[indx]
-            if e == "workflow": # all to }
-                awf = []
-                indx += 1
-                while nfshlex[indx] != "}":
-                    awf.append(nfshlex[indx])
-                    indx += 1
-                nfwf.append(awf)
-            elif e == "include":
-                if nfshlex[indx+3] == '}':  # includes have an alternative form - ['include', '{', 'AMPIR', '}', 'from']
-                    aninc = nfshlex[indx + 2]
-                    indx += 4
-                else:
-                    aninc = nfshlex[indx+4].replace('}', '') # shlex does this
-                    indx += 4
-                testNames.append(aninc)
-                if not aninc.startswith(self.tool_name.upper()):
-                    print(self.tool_name, 'has a chained test from', aninc)
-                    s = "%s\t%s\n" % (self.tool_name, aninc.lower())
-                    with open(self.chainedtestout, 'a') as f:
-                        f.write(s)
-                    sys.exit(9)
-            else:
-                indx += 1
-        for w in nfwf:
-            (tname, tparamnames, tparamvalues) = parseATest(w,testNames)
-        self.nfTests.append([tname, tparamnames, tparamvalues])
-
-    def getTestInfo(self):
-        """ read tests and parse
-        """
-        self.setTestFiles()
-        if '_' in self.tool_name: # ridiculous hack for multi tool modules
-            submod = self.tool_name.replace('_','/') # punt
-            testything = "tests/modules/nf-core/%s/main.nf" % submod
-        else:
-            testything = "tests/modules/nf-core/%s/main.nf" % self.tool_name
-        if os.path.exists(testything):
-            nftesttext = open(testything, "r").read()
-            try:
-                self.testparams = self.tparser.Parse(nftesttext, self.toolname)
-                print(spath, 'PARSED!')
-                self.testok = True
-            except:
-                print(spath, 'failed to parse', s, "boohoo" )
-                self.testok = False
-            # produces self.nftests - dict  {"tname" : tname, "tparamnames":tparamnames, "tparamvalues":tparamvalues}
-        else:
-            nftest = None
-            print(
-                "#### bad news - no test data because testything",
-                testything,
-                "not found",
-            )
 
     def fixParamFormat(self,pfmt):
         """
@@ -382,8 +254,13 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         boolean command line flag
         """
         pdict = {}
+        if indx > len(self.testParamList):
+            print('Makeflag parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
+            self.canTest = False
+            pval = "missing"
+        else:
+            pval = self.testParamList[indx]
         pname = list(inpdict.keys())[0]
-        [tname, tparamnames, tparamvalues] = self.nfTests[0]
         plabel = inpdict[pname]["description"].replace('\n',' ')
         ptype = inpdict[pname]["type"]
         if ptype == "val":
@@ -392,26 +269,32 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             print('Unexpected type (not "val") encountered in makeFlag', ptype)
         pdict["CL"] = pname
         pdict["name"] = pname
-        pdict["value"] = tparamvalues[indx].replace('"', "")
+        pdict["value"] = pval
         pdict["help"] = ""
         pdict["label"] = plabel
         pdict["repeat"] = "0"
         self.tfcl.append("--additional_parameters")
         self.tfcl.append(json.dumps(pdict))
 
-    def makeInfile(self, inpdict, indx, testURL):
+
+    def makeInfile(self, inpdict, indx):
         """
         {'faa': {'type': 'file', 'description': 'FASTA file containing amino acid sequences', 'pattern': '*.{faa,fasta}'}}
 
         need --input_files '{"name": "/home/ross/rossgit/galaxytf/database/objects/d/d/4/dataset_dd49e13c-bd4d-4f8b-8eaa-863483d021f6.dat", "CL": "input_tab", "format": "tabular", "label": "Tabular input file to plot", "help": "If 5000+ rows, html output will fail, but png will work.", "required": "required"}'
         Need to copy testfile from localpath to the target tool test-dir
         """
+        print('infileindx type', type(self.testParamList[1]), indx, self.testParamList)
         pdict = {}
         pid = list(inpdict.keys())[0]
         ppath = pid
-        [tname, tparamnames, tparamvalues] = self.usetest
-        pindex = self.inparamnames.index(pid)
-        tdURL = tparamvalues[pindex]
+        if indx > len(self.testParamList):
+            print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
+            self.canTest = False
+            tdURL = "missing"
+        else:
+            rawf = self.testParamList[indx]
+            tdURL = self.fixTDPath(rawf)
         if not ppath:
             ppath = pid
         plabel = inpdict[pid]["description"].replace('\n',' ')
@@ -437,6 +320,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
 
         TODO: make a format lookup table or otherwise map all the dozens of extensions
         """
+        print('outindx',indx, self.testParamList)
         pdict = {}
         pname = list(inpdict.keys())[0]
         plabel = inpdict[pname]["description"].replace('\n',' ')
@@ -467,17 +351,23 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         need something like --additional_parameters '{"name": "xcol", "value": "petal_length", "label": "x axis for plot", "help": "Select the input tabular column for the horizontal plot axis", "type": "datacolumn","CL": "xcol","override": "", "repeat": "0", "multiple": "", "dataref": "input_tab"}'
         """
         pdict = {}
+        if indx > len(self.testParamList):
+            print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
+            self.canTest = False
+            pval = "missing"
+        else:
+            pval = self.testParamList[indx]
         pname = list(inpdict.keys())[0]
+        ppattern = inpdict[pname]["pattern"]
         plabel = inpdict[pname]["description"].replace('\n',' ')
-        [tname, tparamnames, tparamvalues] = self.nfTests[0]
         if ppattern.startswith("{") and ppattern.endswith("}"):
             # is a select comma separated list
-            self.makeSelect(inpdict)
+            self.makeSelect(inpdict, indx)
         else:
             pdict["type"] = "text"
             pdict["CL"] = pname
             pdict["name"] = pname
-            pdict["value"] = tparamvalues[indx]
+            pdict["value"] = pval
             pdict["help"] = ""
             pdict["label"] = plabel
             pdict["repeat"] = "0"
@@ -489,8 +379,14 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         need something like --additional_parameters '{"name": "xcol", "value": "petal_length", "label": "x axis for plot", "help": "Select the input tabular column for the horizontal plot axis", "type": "datacolumn","CL": "xcol","override": "", "repeat": "0", "multiple": "", "dataref": "input_tab"}'
         """
         pdict = {}
+        print('num indx',indx, self.testParamList)
+        if indx > len(self.testParamList):
+            print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
+            self.canTest = False
+            pval = "missing"
+        else:
+            pval = self.testParamList[indx]
         pname = list(inpdict.keys())[0]
-        [tname, tparamnames, tparamvalues] = self.nfTests[0]
         plabel = inpdict[pname]["description"].replace('\n',' ')
         ptype = inpdict[pname]["type"]
         if ptype == "number":
@@ -499,18 +395,24 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             pdict["type"] = "integer"
         pdict["CL"] = pname
         pdict["name"] = pname
-        pdict["value"] = tparamvalues[indx].replace('"', "")
+        pdict["value"] = pval.replace('"', "")
         pdict["help"] = ""
         pdict["label"] = plabel
         pdict["repeat"] = "0"
         self.tfcl.append("--additional_parameters")
         self.tfcl.append(json.dumps(pdict))
 
-    def makeSelect(self, inpdict):
+    def makeSelect(self, inpdict, indx):
         """--selecttext_parameters '{"name":"outputimagetype", "label":"Select the output format for this plot image. If over 5000 rows of data, HTML breaks browsers, so your job will fail. Use png only if more than 5k rows.", "help":"Small and large png are not interactive but best for many (+10k) points. Stand-alone HTML includes 3MB of javascript. Short form HTML gets it the usual way so can be cut and paste into documents.", "type":"selecttext","CL":"image_type","override":"","value": [ "short_html" , "long_html" , "large_png" , "small_png" ], "texts": [ "Short HTML interactive format" ,  "Long HTML for stand-alone viewing where network access to libraries is not available." ,  "Large (1920x1200) png image - not interactive so hover column ignored" ,  "small (1024x768) png image - not interactive so hover column ignored"  ] }
         "{precursor,mature}" is a ppattern
         """
         pdict = {}
+        if indx > len(self.testParamList[0]):
+            print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
+            self.canTest = False
+            pval = "missing"
+        else:
+            pval = self.testParamList[0][indx]
         pname = list(inpdict.keys())[0]
         plabel = inpdict[pname]["description"].replace('\n',' ')
         ppattern = inpdict[pname]["pattern"]
@@ -523,8 +425,8 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         pdict["help"] = ""
         pdict["override"] = ""
         pdict["label"] = plabel
-        pdict["texts"] = texts  # should be comma separated values...
-        pdict["value"] = pdict["texts"]
+        pdict["texts"] = pval  # should be comma separated values...
+        pdict["value"] = pval
         self.tfcl.append("--selecttext_parameters")
         self.tfcl.append(json.dumps(pdict))
 
@@ -705,13 +607,6 @@ if __name__ == "__main__":
     a("--galaxy_root", required=True, help="Path to local Galaxy to run planemo tests")
     nfargs = parser.parse_args()
     nft = open(nfargs.nftext, "r").readlines()
-    for i,x in enumerate(nft): # remove bogus comment crap
-        row = x.split() # need to find '//' on it's own as the start of a comment - dangerous
-        if '//' in row:
-            rend = row.index('//')
-            fixedrow = row[:rend]
-            nft[i] = ' '.join(fixedrow)
-            print('####### truncated row from', nfargs.nftext, row, 'to', fixedrow)
     nfy = open(nfargs.nfyml, "r")
     nfym = yaml.safe_load(nfy)
     cl = ["touch", "local_tool_conf.xml"]
