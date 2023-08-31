@@ -150,9 +150,9 @@ class ParseNFMod:
         self.setTestFiles()
         if '_' in self.tool_name: # ridiculous hack for multi tool modules
             submod = self.tool_name.replace('_','/') # punt
-            testything = "tests/modules/nf-core/%s/main.nf" % submod
+            testything = "../nfcore_modules/tests/modules/nf-core/%s/main.nf" % submod
         else:
-            testything = "tests/modules/nf-core/%s/main.nf" % self.tool_name
+            testything = "../nfcore_modules/tests/modules/nf-core/%s/main.nf" % self.tool_name
         if os.path.exists(testything):
             nftesttext = open(testything, "r").read()
             clean = cleanUpTests(nftesttext)
