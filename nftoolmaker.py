@@ -626,7 +626,7 @@ if __name__ == "__main__":
     cl = ["touch", "local_tool_conf.xml"]
     subprocess.run(cl)
     nfmod = ParseNFMod(nft, nfym, nfargs)
-    collpath = os.path.join(nfargs.collpath, nfmod.tool_name)
+    collpath = nfargs.collpath
     cl = nfmod.tfcl
     print("cl=", "\n".join(cl))
     args = prepargs(cl)
