@@ -134,7 +134,7 @@ class cleanUpTests():
                 while noend and indx < tlen:
                     row = ss[indx].strip()
                     indx += 1
-                    if not (row.startswith('def ') or (row.startswith("//"))):
+                    if not (row.startswith("//")):
                         rows = row.split()
                         if debug:
                             print('rows:', rows)
@@ -184,16 +184,17 @@ class cleanUpTests():
                                 if x.endswith(','):
                                     x = x[:-1]
                                 if not (x.startswith("[") or x.startswith("]")):
-                                    nob.append(x)
+                                    nob.append(x.replace('"',''))
                         if len(nob) > 0:
-                            thistext += nob
+                            nob = [x for x in nob if x != ")"]
+                            thistext.append(' '.join(nob))
                             if debug:
                                 print('________________row:', nob)
                         else:
                             if debug:
                                 print('gobbled', row)
-                if debug:
-                    print("*********onetest", thistext)
+                #if debug:
+                print("*********onetest", thistext)
                 ttexts.append(thistext)
         self.simplified = ttexts
 
@@ -242,6 +243,7 @@ class nextflowParser():
 
     def __init__(self):
         """
+        deprecated in favour of string hacking
         now much simpler with prefiltering
         """
         self.testroot = "tests/modules/nf-core"

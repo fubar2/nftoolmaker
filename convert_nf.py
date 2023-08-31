@@ -11,15 +11,17 @@ cl = ["python", "nftoolmaker.py",  "--galaxy_root", "/home/ross/rossgit/galaxytf
 
 def amod(mod, dlist):
 
-    yam = [x for x in dlist if x.endswith('.yml')][0]
-    tex = [x for x in dlist if x.endswith('.nfcore') or x.endswith('.nf')][0]
-    toolgz = '%s_nfmod_tool.tar.gz' % os.path.split(mod)[1]
-    acl = cl + ["--nftext", tex, "--nfyml",yam, "--toolgz", toolgz]
-    print('### amod calling nftoolmaker with', acl)
-    p = subprocess.run(acl)
-    if p.returncode:
-        print('amod Got', p.returncode)
-
+    y = [x for x in dlist if x.endswith('.yml')]
+    y +=  [x for x in dlist if x.endswith('.yaml')]
+    if len(y) > 0:
+        yam = y[0]
+        tex = [x for x in dlist if x.endswith('.nfcore') or x.endswith('.nf')][0]
+        acl = cl + ["--nftext", tex, "--nfyml",yam, ]
+        print('### amod calling nftoolmaker with', acl)
+        p = subprocess.run(acl)
+        print('### stdout ', p.stdout, 'stderr', p.stderr)
+    else:
+        print("******* mod', mod, 'has no yml in", dlist, "so cannot parse")
 def convertd(d):
     """one
     """
@@ -28,7 +30,7 @@ def convertd(d):
     dlist = [os.path.join(bpath,dname,x) for x in dlist]
     #print('## convertd dlist',dlist,'for d',d)
     fnames = [x.split('/')[-1] for x in dlist]
-    if "meta.yml" in fnames:
+    if "meta.yml" in fnames or "main.nf" in fnames or "main.nfcore" in fnames:
         amod(d, dlist)
     else:
         for adir in dlist:

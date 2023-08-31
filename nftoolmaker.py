@@ -63,7 +63,7 @@ class ParseNFMod:
         self.testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
         self.tool_name = nfy["name"].replace("'",'').lower().strip()
         self.tool_dir = os.path.join(args.galaxy_root,'local_tools', self.tool_name)
-        self.cl_coda = ["--tested_tool_out", args.toolgz, "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
+        self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
         self.tooltest_dir = os.path.join(self.tool_dir, 'test-data') # for test input files to go
         os.makedirs(self.tool_dir, exist_ok=True)
         os.makedirs(self.tooltest_dir, exist_ok=True)
@@ -74,30 +74,34 @@ class ParseNFMod:
         self.localTestFile =  "nfgenomicstestdata.txt"
         self.setTestFiles() # setup crosswalk for test downloads
         self.tfcl = ["--parampass", "embednfmod"]
+        if args.nftest: # default is not
+            self.tfcl.append("--nftest")
         self.inparamnames = []
         self.outparamnames = []
-        for indx, inpdict in enumerate(nfy["input"]): # need these for tests
+        self.inputpar = []
+        print('nfy[input]', nfy["input"])
+        for d in nfy["input"]:
+            pname = list(d.keys())[0]
+            ptype = d[pname]["type"]
+            if ptype != "map":
+                self.inputpar.append(d)
+        for indx, inpdict in enumerate(self.inputpar): # need these for tests
             # the test names can be different. Go figure.
             pname = list(inpdict.keys())[0]
-            ptype = inpdict[pname]["type"]
-            if ptype != "map":
-                self.inparamnames.append(pname)
+            self.inparamnames.append(pname)
         self.inparamcount = len(self.inparamnames) # needed to select a test using them all - bugger anything else - too hard to match up names
         self.getTestInfo()
-        self.usetest = self.testParamList[0]
-        if self.inparamcount != len(self.usetest):
-            print("### inparamcount = ", self.inparamcount, 'but there are', len(self.usetest), 'test parameters in the first of', self.testParamList)
+        if self.inparamcount != len(self.testParamList):
+            print("### inparamcount = ", self.inparamcount, 'but there are', len(self.testParamList), 'test parameters in', self.testParamList)
             self.canTest = False
         self.makeMeta()
         stub = self.getsection("stub:")  # not all have these - no idea what they're for
-        indx = 0
-        for indx, inpdict in enumerate(nfy["input"]):
+        for indx, inpdict in enumerate(self.inputpar):
             pname = list(inpdict.keys())[0]
             ptype = inpdict[pname]["type"]
             if ptype == "map":
                 print("Ignoring map specified as input %s" % str(inpdict))
-            elif ptype == "file":
-                print('############ tests=', self.usetest, 'pname',pname, 'i', indx, 'inpdict', inpdict, 'inparamnames', self.inparamnames)
+            elif ptype.startswith("file"): # one case has files
                 self.makeInfile(inpdict,indx)
             elif ptype == "string":
                 self.makeString(inpdict, indx)
@@ -110,7 +114,7 @@ class ParseNFMod:
         for inpdict in nfy["output"]:
             pname = list(inpdict.keys())[0]
             ptype = inpdict[pname]["type"]
-            if ptype == "file":
+            if ptype.startswith("file"): # one case has files:
                 tfdict = self.makeOutfile(inpdict)
             elif ptype == "map":
                 print("Ignoring map specified as output %s" % str(inpdict))
@@ -154,7 +158,10 @@ class ParseNFMod:
             tests = clean.simplified
             print(testything, 'PARSED! =', tests)
             self.testok = True
-            self.testParamList = tests
+            if type(tests[0]) == type([]):
+                self.testParamList = tests[0]
+            else:
+                self.testParamList = tests
         else:
             nftest = None
             print(
@@ -175,7 +182,7 @@ class ParseNFMod:
                     .replace("][", "/")
                     .replace("'", "")
                 )  # 'candidatus_portiera_aleyrodidarum/genome/proteome_fasta'
-                tfilename = testfpath.split('/')[-1].replace('_','.')
+                tfilename = testfpath.split('/')[-1].replace('_','.').replace(']','')
                 # so much evil, pointless obfuscation and indirection
                 # because we can.
                 tstart = '/'.join(testfpath.split('/')[:-1])
@@ -216,7 +223,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
 
         """
         swaps = {'faa':'fasta', 'hmmer':'hmm3', 'hmm':'hmm3', 'sthlm.gz':"stockholm", 'sthlm': "stockholm", "fa": "fasta",
-            "hmm.gz": "hmm3", "hm.gz": "hmm3", }
+            "hmm.gz": "hmm3", "hm.gz": "hmm3", "abacas*":"txt"}
         fastaspawn = ['fna.gz','faa.gz','fasta.gz','fa.gz', 'faa', 'fa', ]
         fixedfmt = []
         for f in pfmt.split(','):
@@ -253,6 +260,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         boolean command line flag
         """
+        print('flag indx',indx, self.testParamList)
         pdict = {}
         if indx > len(self.testParamList):
             print('Makeflag parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
@@ -284,7 +292,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         need --input_files '{"name": "/home/ross/rossgit/galaxytf/database/objects/d/d/4/dataset_dd49e13c-bd4d-4f8b-8eaa-863483d021f6.dat", "CL": "input_tab", "format": "tabular", "label": "Tabular input file to plot", "help": "If 5000+ rows, html output will fail, but png will work.", "required": "required"}'
         Need to copy testfile from localpath to the target tool test-dir
         """
-        print('infileindx type', type(self.testParamList[1]), indx, self.testParamList)
+        print('infileindx', indx, self.testParamList)
         pdict = {}
         pid = list(inpdict.keys())[0]
         ppath = pid
@@ -298,7 +306,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         if not ppath:
             ppath = pid
         plabel = inpdict[pid]["description"].replace('\n',' ')
-        ppattern = inpdict[pid]["pattern"]
+        ppattern = inpdict[pid].get("pattern", "txt")
         ppattern = ppattern.translate({ord(i): None for i in FILTERCHARS})
         if ppattern.startswith('*'): # why? "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             ppattern = ppattern[2:]
@@ -320,7 +328,6 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
 
         TODO: make a format lookup table or otherwise map all the dozens of extensions
         """
-        print('outindx',indx, self.testParamList)
         pdict = {}
         pname = list(inpdict.keys())[0]
         plabel = inpdict[pname]["description"].replace('\n',' ')
@@ -350,6 +357,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         need something like --additional_parameters '{"name": "xcol", "value": "petal_length", "label": "x axis for plot", "help": "Select the input tabular column for the horizontal plot axis", "type": "datacolumn","CL": "xcol","override": "", "repeat": "0", "multiple": "", "dataref": "input_tab"}'
         """
+        print('str indx',indx, self.testParamList)
         pdict = {}
         if indx > len(self.testParamList):
             print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
@@ -406,6 +414,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """--selecttext_parameters '{"name":"outputimagetype", "label":"Select the output format for this plot image. If over 5000 rows of data, HTML breaks browsers, so your job will fail. Use png only if more than 5k rows.", "help":"Small and large png are not interactive but best for many (+10k) points. Stand-alone HTML includes 3MB of javascript. Short form HTML gets it the usual way so can be cut and paste into documents.", "type":"selecttext","CL":"image_type","override":"","value": [ "short_html" , "long_html" , "large_png" , "small_png" ], "texts": [ "Short HTML interactive format" ,  "Long HTML for stand-alone viewing where network access to libraries is not available." ,  "Large (1920x1200) png image - not interactive so hover column ignored" ,  "small (1024x768) png image - not interactive so hover column ignored"  ] }
         "{precursor,mature}" is a ppattern
         """
+        print('sel indx',indx, self.testParamList)
         pdict = {}
         if indx > len(self.testParamList[0]):
             print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
@@ -425,8 +434,8 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         pdict["help"] = ""
         pdict["override"] = ""
         pdict["label"] = plabel
-        pdict["texts"] = pval  # should be comma separated values...
-        pdict["value"] = pval
+        pdict["texts"] = texts # should be comma separated values...
+        pdict["value"] = texts
         self.tfcl.append("--selecttext_parameters")
         self.tfcl.append(json.dumps(pdict))
 
@@ -469,7 +478,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         self.tfcl.append("--packages")
         self.tfcl.append(creq)
 
-    def makeScript(self, scrip):
+    def makeScript(self, ss):
         """
         script is delimited by triple "
         need to do some serious skullduggery <- does not work well so substitute for = in Rscript
@@ -483,22 +492,28 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
 
         """
         sexe = None
-        s = scrip.split('"""')[1]
+        sss = ss.split('"""')
+        if len(sss) < 2:
+            sys.stderr.write('@@@@ cannot find a script in %s so cannot build' % self.tool_name)
+            sys.exit(0)
+        else:
+             s = sss[1]
         for pfmt in self.scriptPrefixSubs.keys():
             subme = self.scriptPrefixSubs[pfmt]
             s = s.replace('${prefix}.%s' % pfmt, subme)
         ss = s.split("\n")  # first shebang line maybe
         ss = [x.strip() for x in ss if x.strip() > ""]
         sfirst = ss[0]
+        fiddled = []
         if sfirst.startswith("#!"):
             sexe = sfirst.split(" ")[1]
             if sexe == "Rscript":
                 s = s.replace("<-", "=")
         else:
-            fiddled = []
             fixargs = False
             sexe = 'bash' # assume is a bash script?
             for i, row in enumerate(ss): # replace bogus // with proper /
+                row = row.strip()
                 if "$args" in row: # this is such a kludge - who knows what the mad fuckers do with $args.
                     fiddled.append('### full disclosure! nf-core $args has been removed by nftoolmaker.py\n')
                     fixargs = True
@@ -508,6 +523,14 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
                     row = row.replace('| gzip -c ','')
                     ss[i] = row
                     fiddled.append('### full disclosure! | gzip -c removed by nftoolmaker.py\n')
+                elif row.startswith('mv '): # comment out as will fail probably
+                    ss[i] = '## %s commented out by nftoolmaker as it will probably break' % ss[i]
+                elif row.startswith('gzip ') or row.startswith('gunzip'): # comment out as will fail probably
+                    ss[i] = '## %s commented out by nftoolmaker as it will probably break' % ss[i]
+                elif row.startswith('def ') : # hmmm - temp $ variable?
+                    rows = row.split() # def foo = bar
+                    fiddled.append("$%s = %s" % (rows[1], rows[2]))
+                    ss[i] = '## %s replaced with definition by nftoolmaker.py' % row
             if fixargs:
                 ss = [x for x in ss if not "$args" in x]
             s = '\n'.join(ss)
@@ -525,27 +548,18 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
 
     def getsection(self, flag):
         insect = False
-        inquote = False
         sect = []
         for x in self.nftext:
             if x.lstrip().startswith(flag):
                 insect = True
             else:
                 if insect:
-                    if x.strip() == '"""':
-                        if inquote:
-                            sect.append(x.strip())
-                            inquote = False
-                            insect = False
-                        else:
-                            inquote = True
-                    if x.strip() == "":
-                        if not inquote:
-                            insect = False
-                if insect:
-                    if x.startswith('description:'):
-                        x = x.replace('\n',' ')
-                    sect.append(x.strip())
+                    if x.strip().endswith("}"):
+                        insect = False
+                    else:
+                        if x.startswith('description:'):
+                            x = x.replace('\n',' ')
+                        sect.append(x.strip())
         return "\n".join(sect)
 
     def getlinestart(self, flag):
@@ -588,8 +602,7 @@ if __name__ == "__main__":
         a("--admin_only", default=True, action="store_true")
         a("--tested_tool_out", default=None)
         a("--tool_conf_path", default="config/tool_conf.xml")  # relative to $__root_dir__
-        a(
-            "--xtra_files",
+        a("--xtra_files",
             default=[],
             action="append",
         )  # history data items to add to the tool base directory
@@ -599,10 +612,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     a = parser.add_argument
+    a("--nftest", action="store_true", default=False)
     a("--nftext", required=True)
     a("--nfyml", required=True)
     a("--collpath", default="toolgen")
-    a("--toolgz", required=True)
     a("--toolfactory_dir", required=True, help="Path to the toolfactory directory on the local Galaxy - needed for utility scripts")
     a("--galaxy_root", required=True, help="Path to local Galaxy to run planemo tests")
     nfargs = parser.parse_args()
@@ -612,6 +625,7 @@ if __name__ == "__main__":
     cl = ["touch", "local_tool_conf.xml"]
     subprocess.run(cl)
     nfmod = ParseNFMod(nft, nfym, nfargs)
+    collpath = os.path.join(nfargs.collpath, nfmod.tool_name)
     cl = nfmod.tfcl
     print("cl=", "\n".join(cl))
     args = prepargs(cl)
@@ -619,8 +633,8 @@ if __name__ == "__main__":
         args.tool_name
     ), "## This nf-core module ToolFactory cannot build a tool without a tool name. Please supply one."
     logfilename = "nfmodToolFactory_make_%s_log.txt" % args.tool_name
-    if not os.path.exists(nfargs.collpath):
-        os.mkdir(nfargs.collpath)
+    if not os.path.exists(collpath):
+        os.mkdir(collpath)
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(logfilename, mode="w")
     fformatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -629,35 +643,38 @@ if __name__ == "__main__":
     tf = Tool_Factory(args)
     tf.makeTool()
     tf.writeShedyml()
-    tf.update_toolconf()
-    time.sleep(5)
-    if tf.condaenv and len(tf.condaenv) > 0:
-        tf.install_deps()
-        logger.debug("Toolfactory installed deps. Calling fast test")
-    time.sleep(2)
+    res = tf.update_toolconf()
+
     # testret = tf.fast_local_test()
-    testret = tf.planemo_local_test()
-    logger.debug("Toolfactory finished test")
-    if int(testret) > 0:
-        logger.error("ToolFactory tool build and test failed. :(")
-        logger.info(
-            "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
-        )
-        logger.info("when tested with galaxy_tool_test.  Error code:%d" % testret, ".")
-        logger.info(
-            "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
-        )
-        logger.info(
-            "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
-        )
-        logger.info(
-            "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
-        )
-        logger.info(
-            "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
-        )
-        logging.shutdown()
-        sys.exit(5)
+    if args.nftest:
+        if tf.condaenv and len(tf.condaenv) > 0:
+            tf.install_deps()
+            logger.debug("Toolfactory installed deps. Calling fast test")
+        time.sleep(2)
+        testret = tf.planemo_local_test()
+        logger.debug("Toolfactory finished test")
+        if int(testret) > 0:
+            logger.error("ToolFactory tool build and test failed. :(")
+            logger.info(
+                "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
+            )
+            logger.info("when tested with galaxy_tool_test.  Error code:%d" % testret, ".")
+            logger.info(
+                "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
+            )
+            logger.info(
+                "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
+            )
+            logger.info(
+                "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
+            )
+            logger.info(
+                "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
+            )
+            logging.shutdown()
+            tf.makeToolTar(1)
+        else:
+            tf.makeToolTar()
     else:
-        tf.makeToolTar(testret)
+        tf.makeToolTar(1)
     logging.shutdown()

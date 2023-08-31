@@ -78,10 +78,7 @@ class Tool_Factory:
         self.script_in_help = False  # IUC recommendation
         self.tool_name = re.sub("[^a-zA-Z0-9_]+", "", args.tool_name)
         self.tool_id = self.tool_name
-        if self.nfcoremod:
-            self.local_tools = "./"
-        else:
-            self.local_tools = os.path.join(args.galaxy_root, "local_tools")
+        self.local_tools = os.path.join(args.galaxy_root, "local_tools")
         os.makedirs(self.local_tools, exist_ok=True)
         self.local_tool_conf = os.path.join(self.local_tools, "local_tool_conf.xml")
         self.ourcwd = os.getcwd()
@@ -181,9 +178,9 @@ class Tool_Factory:
             self.args.tool_desc,
             "",
         )
-        self.toold = os.path.join(self.local_tools, self.tool_name)
+        self.repdir = os.path.join(self.args.tfcollection,'TF')
+        self.toold = self.args.tfcollection
         self.tooltestd = os.path.join(self.toold, "test-data")
-        self.repdir = self.args.tfcollection
         self.newtarpath = args.tested_tool_out
         if not os.path.exists(self.repdir):
             os.mkdir(self.repdir)
@@ -997,27 +994,40 @@ class Tool_Factory:
         for p in self.outfiles:
             oname = p["name"]
             src = os.path.join(self.tooltestd, "%s_sample" % oname)
-            dest = os.path.join(
-                self.repdir, "%s_sample_%s.%s" % (oname, p["format"], p["format"])
-            )
-            shutil.copyfile(src, dest)
-            self.logger.info("Copied %s to %s" % (src, dest))
+            if not test_retcode:
+                dest = os.path.join(
+                    self.repdir, "%s_sample_%s.%s" % (oname, p["format"], p["format"])
+                )
+                shutil.copyfile(src, dest)
+                self.logger.info("Copied %s to %s" % (src, dest))
+            else:
+                dest = os.path.join(
+                    self.repdir, "%s_sample_%s.%s_EMPTY_PLEASE_FIX" % (oname, p["format"], p["format"])
+                )
+                f = open(dest,'w')
+                f.close()
         td = os.listdir(self.tooltestd)
-        for src in td:
-            dest = os.path.join(self.repdir, src)
-            shutil.copyfile(os.path.join(self.tooltestd, src), dest)
-            self.logger.info("Copied %s %s\n" % (src, dest))
-        tf = tarfile.open(self.newtarpath, "w:gz")
+        if test_retcode:
+            for src in td:
+                dest = os.path.join(self.repdir, src)
+                shutil.copyfile(os.path.join(self.tooltestd, src), dest)
+                self.logger.info("Copied %s %s\n" % (src, dest))
+        if test_retcode:
+            tardest = os.path.join(self.repdir, f"{self.tool_name}_UNTESTED_toolshed.gz")
+        else:
+            tardest = os.path.join(self.repdir, f"{self.tool_name}_toolshed.gz")
+        if tf = tarfile.open(tardest, "w:gz")
         tf.add(
             name=self.toold,
             arcname=self.tool_name,
             filter=exclude_function,
         )
-        shutil.copy(
-            self.newtarpath,
-            os.path.join(self.repdir, f"{self.tool_name}_toolshed.gz"),
-        )
         tf.close()
+        if test_retcode and self.newtarpath:
+            dest = self.newtarpath
+            shutil.copy(
+            tardest, dest,)
+
 
     def planemo_local_test(self):
         """
@@ -1051,20 +1061,24 @@ class Tool_Factory:
             xout,
         ]
         self.logger.info("planemo_local_test executing: %s" % " ".join(clx))
-        p = subprocess.run(
-            " ".join(cl),
-            shell=True,
-            cwd=self.toold,
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        for errline in p.stderr.splitlines():
-            self.logger.info(errline)
-        dest = self.repdir
-        src = self.tooltestd
-        shutil.copytree(src, dest, dirs_exist_ok=True)
-        return p.returncode
+        try:
+            p = subprocess.run(
+                " ".join(cl),
+                shell=True,
+                cwd=self.toold,
+                capture_output=True,
+                check=True,
+                text=True,
+            )
+            for errline in p.stderr.splitlines():
+                self.logger.info(errline)
+            dest = self.repdir
+            src = self.tooltestd
+            shutil.copytree(src, dest, dirs_exist_ok=True)
+            return p.returncode
+        except:
+            return 1
+
 
     def fast_local_test(self):
         """
@@ -1132,7 +1146,7 @@ class Tool_Factory:
         gi = galaxy.GalaxyInstance(url=self.GALAXY_URL, key=self.GALAXY_ADMIN_KEY)
         toolready = False
         now = time.time()
-        nloop = 20
+        nloop = 5
         while nloop >= 0 and not toolready:
             try:
                 res = gi.tools.show_tool(tool_id=self.tool_name)
@@ -1150,7 +1164,9 @@ class Tool_Factory:
                 "Tool %s still not ready after %f seconds - please check the form and the generated xml for errors? \n"
                 % (self.tool_name, time.time() - now)
             )
-            sys.exit(3)
+            return 1
+        else:
+            return 0
 
     def install_deps(self):
         """
@@ -1162,10 +1178,13 @@ class Tool_Factory:
             self.tool_name,
         ]
         self.logger.info("Running %s\n" % " ".join(cll))
-        p = subprocess.run(cll, shell=False, capture_output=True, check=True, text=True)
-        for errline in p.stderr.splitlines():
-            self.logger.info(errline)
-        return p.returncode
+        try:
+            p = subprocess.run(cll, shell=False, capture_output=True, check=True, text=True)
+            for errline in p.stderr.splitlines():
+                self.logger.info(errline)
+            return p.returncode
+        except:
+            return 1
 
     def timenow(self):
         """return current time as a string"""
@@ -1255,38 +1274,52 @@ admin adds %s to "admin_users" in the galaxy.yml Galaxy configuration file'
     tf = Tool_Factory(args)
     tf.makeTool()
     tf.writeShedyml()
-    tf.update_toolconf()
-    time.sleep(5)
-    if tf.condaenv and len(tf.condaenv) > 0:
-        tf.install_deps()
-        logger.debug("Toolfactory installed deps. Calling fast test")
-    time.sleep(2)
-    # testret = tf.fast_local_test()
-    testret = tf.planemo_local_test()
-    logger.debug("Toolfactory finished test")
-    if int(testret) > 0:
-        logger.error("ToolFactory tool build and test failed. :(")
-        logger.info(
-            "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
-        )
-        logger.info("when tested with galaxy_tool_test.  Error code:%d" % testret, ".")
-        logger.info(
-            "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
-        )
-        logger.info(
-            "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
-        )
-        logger.info(
-            "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
-        )
-        logger.info(
-            "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
-        )
-        logging.shutdown()
-        sys.exit(5)
+    res = tf.update_toolconf()
+    dotest = args.nftest
+    if res:
+        logger.debug("Tool %s not installed. No test can be run")
+        dotest = False
     else:
-        tf.makeToolTar(testret)
-    logging.shutdown()
+        time.sleep(3)
+    if dotest:
+        if tf.condaenv and len(tf.condaenv) > 0:
+            res = tf.install_deps()
+            if res:
+                sys.stderr.write( '%s installation failed - bad generated xml so no test attempted' % self.tool_name)
+                dotest = False
+            else:
+                logger.debug("Toolfactory installed deps.")
+        testret = tf.planemo_local_test()
+        logger.debug("Toolfactory finished test")
+        if int(testret) > 0:
+            sys.stderr.write( '%s xml installed but test failed' % self.tool_name)
+            logger.error("ToolFactory tool build and test failed. :(")
+            logger.info(
+                "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
+            )
+            logger.info("when tested with galaxy_tool_test.  Error code:%d" % testret, ".")
+            logger.info(
+                "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
+            )
+            logger.info(
+                "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
+            )
+            logger.info(
+                "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
+            )
+            logger.info(
+                "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
+            )
+            logging.shutdown()
+            tf.makeToolTar(1) # signal untested
+        else:
+            logging.shutdown()
+            tf.makeToolTar(0)
+            sys.stdout.write('%s test passed' % self.tool_name)
+    else:
+        tf.makeToolTar(1)
+        logging.shutdown()
+
 
 
 if __name__ == "__main__":
