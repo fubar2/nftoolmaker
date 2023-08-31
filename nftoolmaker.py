@@ -635,7 +635,7 @@ if __name__ == "__main__":
     ), "## This nf-core module ToolFactory cannot build a tool without a tool name. Please supply one."
     logfilename = "nfmodToolFactory_make_%s_log.txt" % args.tool_name
     if not os.path.exists(collpath):
-        os.mkdir(collpath)
+        os.makedirs(collpath, exist_ok=True)
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(logfilename, mode="w")
     fformatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
