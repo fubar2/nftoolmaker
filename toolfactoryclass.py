@@ -78,7 +78,10 @@ class Tool_Factory:
         self.script_in_help = False  # IUC recommendation
         self.tool_name = re.sub("[^a-zA-Z0-9_]+", "", args.tool_name)
         self.tool_id = self.tool_name
-        self.local_tools = os.path.join(args.galaxy_root, "local_tools")
+        if self.nfcoremod:
+            self.local_tools = self.args.tfcollection
+        else:
+            self.local_tools = os.path.join(args.galaxy_root, "local_tools")
         os.makedirs(self.local_tools, exist_ok=True)
         self.local_tool_conf = os.path.join(self.local_tools, "local_tool_conf.xml")
         self.ourcwd = os.getcwd()
@@ -1016,7 +1019,7 @@ class Tool_Factory:
             tardest = os.path.join(self.repdir, f"{self.tool_name}_UNTESTED_toolshed.gz")
         else:
             tardest = os.path.join(self.repdir, f"{self.tool_name}_toolshed.gz")
-        if tf = tarfile.open(tardest, "w:gz")
+        tf = tarfile.open(tardest, "w:gz")
         tf.add(
             name=self.toold,
             arcname=self.tool_name,

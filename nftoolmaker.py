@@ -7,6 +7,7 @@
 import argparse
 import json
 import os
+import pathlib
 import sys
 import subprocess
 import tempfile
@@ -65,8 +66,8 @@ class ParseNFMod:
         self.tool_dir = os.path.join(args.galaxy_root,'local_tools', self.tool_name)
         self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
         self.tooltest_dir = os.path.join(self.tool_dir, 'test-data') # for test input files to go
-        os.makedirs(self.tool_dir, exist_ok=True)
-        os.makedirs(self.tooltest_dir, exist_ok=True)
+        pathlib.Path(self.tool_dir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.tooltest_dir).mkdir(parents=True, exist_ok=True)
         self.scriptPrefixSubs = {}
         self.nftext = nft
         self.nfyaml = nfy
