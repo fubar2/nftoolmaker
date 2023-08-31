@@ -181,12 +181,11 @@ class Tool_Factory:
             self.args.tool_desc,
             "",
         )
-        self.repdir = os.path.join(self.args.tfcollection,'TF')
-        self.toold = self.args.tfcollection
+        self.repdir = os.path.join(self.args.tfcollection,'TF', self.tool_name)
+        self.toold = os.path.join(self.args.tfcollection, 'TF', self.tool_name)
         self.tooltestd = os.path.join(self.toold, "test-data")
         self.newtarpath = args.tested_tool_out
-        if not os.path.exists(self.repdir):
-            os.mkdir(self.repdir)
+        os.makedirs(self.repdir, exist_ok=True)
         self.tinputs = gxtp.Inputs()
         self.toutputs = gxtp.Outputs()
         self.testparam = []

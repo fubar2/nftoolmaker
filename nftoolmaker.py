@@ -63,7 +63,7 @@ class ParseNFMod:
         f.close()
         self.testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
         self.tool_name = nfy["name"].replace("'",'').lower().strip()
-        self.tool_dir = os.path.join(args.galaxy_root,'local_tools', self.tool_name)
+        self.tool_dir = os.path.join(args.collpath,'TF', self.tool_name)
         self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
         self.tooltest_dir = os.path.join(self.tool_dir, 'test-data') # for test input files to go
         pathlib.Path(self.tool_dir).mkdir(parents=True, exist_ok=True)
