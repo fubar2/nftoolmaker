@@ -7,7 +7,7 @@ import os
 import subprocess
 
 corepath = '../nfcore_modules/modules/nf-core'
-cl = ["python", "nftoolmaker.py",  "--galaxy_root", "/home/ross/rossgit/galaxytf", "--toolfactory_dir", "/home/ross/rossgit/galaxytf/local_tools/toolfactory"]
+cl = ["python", "nftoolmaker.py",  "--galaxy_root", "nfmod_tools", "--toolfactory_dir", "./"]
 
 def amod(mod, dlist):
 
@@ -22,6 +22,7 @@ def amod(mod, dlist):
         print('### stdout ', p.stdout, 'stderr', p.stderr)
     else:
         print("******* mod', mod, 'has no yml in", dlist, "so cannot parse")
+
 def convertd(d):
     """one
     """

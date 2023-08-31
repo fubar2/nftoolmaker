@@ -79,7 +79,7 @@ class Tool_Factory:
         self.tool_name = re.sub("[^a-zA-Z0-9_]+", "", args.tool_name)
         self.tool_id = self.tool_name
         if self.nfcoremod:
-            self.local_tools = self.args.tfcollection
+            self.local_tools = args.tfcollection
         else:
             self.local_tools = os.path.join(args.galaxy_root, "local_tools")
         os.makedirs(self.local_tools, exist_ok=True)

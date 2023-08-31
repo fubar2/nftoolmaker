@@ -596,7 +596,7 @@ if __name__ == "__main__":
         a("--edit_additional_parameters", action="store_true", default=False)
         a("--parampass", default="positional")
         a("--tfcollection", default="toolgen")
-        a("--galaxy_root", default="/galaxy-central")
+        a("--galaxy_root", default="./nfmod_tools")
         a("--collection", action="append", default=[])
         a("--include_tests", default=False, action="store_true")
         a("--install_flag", action="store_true", default=False)
@@ -643,11 +643,9 @@ if __name__ == "__main__":
     logger.addHandler(fh)
     tf = Tool_Factory(args)
     tf.makeTool()
-    tf.writeShedyml()
-    res = tf.update_toolconf()
-
-    # testret = tf.fast_local_test()
     if args.nftest:
+        tf.writeShedyml()
+        res = tf.update_toolconf()
         if tf.condaenv and len(tf.condaenv) > 0:
             tf.install_deps()
             logger.debug("Toolfactory installed deps. Calling fast test")
