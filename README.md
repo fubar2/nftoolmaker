@@ -6,7 +6,32 @@ A tool that will download and parse a github nf-core module repository, and run 
 
 The repository https://github.com/nf-core/modules/tree/master/modules/nf-core has lots of modules, described in paired files - meta.yml and main.nf. They could potentially be auto-converted into Galaxy tools by constructing a suitable command line for the ToolFactory script.
 
-## currently parsing 613 tests but failing 384.
+## September 1
+
+All modules have been attempted and we now have ~850 ready for
+testing of the 950 or so.
+
+Abandoned pyparsing for the tests - too fragile in my
+inexperienced hands with all the batshit crazy ways developers have
+used the nfcore DDL. Fortunately the test texts are line oriented so
+it's much easier for me to just clean up the test sections to extract
+the test files and parameter values using row based script hackery.
+
+
+The collection is huge ~12GB with all the redundant test data sets.
+This will be fixed soon with URI for all test data but can't do that
+until the ToolFactory is working in release 23.1 - was broken because
+many of the utilities had an incompatible version of galaxy-util or
+tool-util - should be fixed once the release is done.
+
+**Please let me know if there are any nf-core modules you need for your
+work and I'll try to build a Galaxy tool for you.**
+
+
+### Jottings and notes from the process so far
+
+August 28
+Currently parsing 613 tests but failing 384.
 Failed tests texts are collected into a text file so can look for
 themes.
 
@@ -14,7 +39,6 @@ Adding a preprocessing step has really helped.
 Nesting can be decomposed but it is a hydra so will take some more work
 to deal with the remaining 1/3
 
-### Jottings and notes from the process so far
 
 August 25
 
