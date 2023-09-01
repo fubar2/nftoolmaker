@@ -76,7 +76,7 @@ class ParseNFMod:
         pathlib.Path(self.repdir).mkdir(parents=True, exist_ok=True)
         self.scriptPrefixSubs = {}
         self.nftext = nft
-        if "secret 'SENTIEON_LICENSE_" in nft:
+        if "secret 'SENTIEON_LICENSE_" in ' '.join(nft):
             print("!!!!!!!!!!!!!!! Refusing to build a tool for a proprietary licenced binary !!!!!!!!!!!!!!!!!!!!")
             sys.exit(0)
         self.nfyaml = nfy
@@ -646,9 +646,8 @@ if __name__ == "__main__":
     nft = open(nfargs.nftext, "r").readlines()
     nfy = open(nfargs.nfyml, "r")
     nfym = yaml.safe_load(nfy)
-    cl = ["touch", "local_tool_conf.xml"]
-    subprocess.run(cl)
     nfmod = ParseNFMod(nft, nfym, nfargs)
+    print('@@@@@@nftoolmaker building', nfmod.tool_name)
     collpath = nfargs.collpath
     cl = nfmod.tfcl
     print("cl=", "\n".join(cl))

@@ -16,7 +16,7 @@ def amod(mod, dlist):
     if len(y) > 0:
         yam = y[0]
         tex = [x for x in dlist if x.endswith('.nfcore') or x.endswith('.nf')][0]
-        acl = cl + ["--nftext", tex, "--nfyml",yam, ]
+        acl = cl + ["--nftext", tex, "--nfyml", yam, ]
         print('### amod calling nftoolmaker with', acl)
         p = subprocess.run(acl)
         print('### stdout ', p.stdout, 'stderr', p.stderr)
