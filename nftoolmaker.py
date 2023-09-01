@@ -63,11 +63,13 @@ class ParseNFMod:
         f.close()
         self.testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
         self.tool_name = nfy["name"].replace("'",'').lower().strip()
-        self.tool_dir = os.path.join(args.collpath,'TF', self.tool_name)
+        self.toold = os.path.join(args.collpath,'tools', self.tool_name)
+        self.repd = os.path.join(args.collpath,'TFouts', self.tool_name)
         self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
-        self.tooltest_dir = os.path.join(self.tool_dir, 'test-data') # for test input files to go
-        pathlib.Path(self.tool_dir).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.tooltest_dir).mkdir(parents=True, exist_ok=True)
+        self.tooltestd = os.path.join(self.toold, 'test-data') # for test input files to go
+        pathlib.Path(self.toold).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.tooltestd).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.repd).mkdir(parents=True, exist_ok=True)
         self.scriptPrefixSubs = {}
         self.nftext = nft
         self.nfyaml = nfy
@@ -244,7 +246,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         may need to be ungzipped and in test folder
         """
-        localpath = os.path.abspath(os.path.join(self.tooltest_dir, "%s_sample" % pname))
+        localpath = os.path.join(self.tooltestd, "%s_sample" % pname)
         if not os.path.exists(localpath):
             cl = ["wget", "-O", localpath, testDataURL]
             if testDataURL.endswith('.gz'): # major kludge as usual...
@@ -253,7 +255,6 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             p = subprocess.run(' '.join(cl), shell = True)
             if p.returncode:
                 print("Got", p.returncode, "from executing", " ".join(cl))
-                sys.exit(3)
         else:
             print('Not re-downloading', localpath)
 
@@ -633,7 +634,7 @@ if __name__ == "__main__":
     assert (
         args.tool_name
     ), "## This nf-core module ToolFactory cannot build a tool without a tool name. Please supply one."
-    logfilename = "nfmodToolFactory_make_%s_log.txt" % args.tool_name
+    logfilename = os.path.join(nfmod.repd, "nfmodToolFactory_make_%s_log.txt" % args.tool_name)
     if not os.path.exists(collpath):
         os.makedirs(collpath, exist_ok=True)
     logger.setLevel(logging.INFO)

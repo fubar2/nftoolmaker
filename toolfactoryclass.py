@@ -79,7 +79,7 @@ class Tool_Factory:
         self.tool_name = re.sub("[^a-zA-Z0-9_]+", "", args.tool_name)
         self.tool_id = self.tool_name
         if self.nfcoremod:
-            self.local_tools = args.tfcollection
+            self.local_tools = os.path.join(args.tfcollection, "tools")
         else:
             self.local_tools = os.path.join(args.galaxy_root, "local_tools")
         os.makedirs(self.local_tools, exist_ok=True)
@@ -181,11 +181,13 @@ class Tool_Factory:
             self.args.tool_desc,
             "",
         )
-        self.repdir = os.path.join(self.args.tfcollection,'TF', self.tool_name)
-        self.toold = os.path.join(self.args.tfcollection, 'TF', self.tool_name)
+        self.repdir = os.path.join(args.tfcollection, "TFouts", self.tool_name)
+        self.toold = os.path.join(self.local_tools, self.tool_name)
         self.tooltestd = os.path.join(self.toold, "test-data")
         self.newtarpath = args.tested_tool_out
         os.makedirs(self.repdir, exist_ok=True)
+        os.makedirs(self.toold, exist_ok=True)
+        os.makedirs(self.tooltestd, exist_ok=True)
         self.tinputs = gxtp.Inputs()
         self.toutputs = gxtp.Outputs()
         self.testparam = []
@@ -361,10 +363,9 @@ class Tool_Factory:
         rxcheck = [x.strip() for x in rx if x.strip() > ""]
         assert len(rxcheck) > 0, "Supplied script is empty. Cannot run"
         self.script = "\n".join(rxcheck)
-        fhandle, self.sfile = tempfile.mkstemp(
-            prefix=self.tool_name, suffix="_%s" % (self.executeme[0])
-        )
-        tscript = open(self.sfile, "w")
+        self.scriptname = '%s_%s' % (self.tool_name, self.executeme[0])
+        self.scriptpath = os.path.join(self.repdir, self.scriptname)
+        tscript = open(self.scriptpath, "w")
         tscript.write(self.script)
         tscript.close()
         self.spacedScript = [
@@ -373,10 +374,10 @@ class Tool_Factory:
         rxcheck.insert(0, "#raw")
         rxcheck.append("#end raw")
         self.escapedScript = rxcheck
-        art = "%s.%s" % (self.tool_name, self.executeme[0])
-        artifact = open(art, "wb")
-        artifact.write(bytes(self.script, "utf8"))
-        artifact.close()
+        # art = "%s.%s" % (self.tool_name, self.executeme[0])
+        # artifact = open(art, "wb")
+        # artifact.write(bytes(self.script, "utf8"))
+        # artifact.close()
 
     def cleanuppar(self):
         """positional parameters are complicated by their numeric ordinal"""
@@ -920,7 +921,7 @@ class Tool_Factory:
             part2 = exml.split("</tests>")[1]
             fixed = "%s\n%s\n%s" % (part1, "\n".join(self.test_override), part2)
             exml = fixed
-        with open("%s.xml" % self.tool_name, "w") as xf:
+        with open(os.path.join(self.toold,"%s.xml" % self.tool_name), "w") as xf:
             xf.write(exml)
             xf.write("\n")
         # galaxy history item
@@ -943,23 +944,22 @@ class Tool_Factory:
 
     def makeTool(self):
         """write xmls and input samples into place"""
-        os.makedirs(self.tooltestd, exist_ok=True)
         if self.args.parampass == 0:
             self.doNoXMLparam()
         else:
             self.makeXML()
         if self.args.script_path:
-            stname = os.path.join(self.toold, self.sfile)
+            stname = os.path.join(self.toold, self.scriptname)
             if not os.path.exists(stname):
-                shutil.copyfile(self.sfile, stname)
-        xreal = "%s.xml" % self.tool_name
-        xout = os.path.join(self.toold, xreal)
-        shutil.copyfile(xreal, xout)
-        self.logger.info("Copied %s to %s" % (xreal, xout))
+                shutil.copyfile(self.scriptpath, stname)
+        exml = "%s.xml" % self.tool_name
+        xout = os.path.join(self.toold, exml)
+        #shutil.copyfile(os.path.join(self.toold, xout)
+        #self.logger.info("Copied %s to %s" % (xreal, xout))
         xrename = "%s_toolxml.xml" % self.tool_name
-        xout = os.path.join(self.repdir, xrename)
-        shutil.copyfile(xreal, xout)
-        self.logger.info("Copied %s to %s" % (xreal, xout))
+        xrout = os.path.join(self.repdir, xrename)
+        shutil.copyfile(xout, xrout)
+        self.logger.info("Copied %s to %s" % (xout, xrout))
         for p in self.infiles:
             pth = p["name"]
             if os.path.exists(pth):
@@ -991,7 +991,7 @@ class Tool_Factory:
             return None if filename.endswith(excludeme) else tarinfo
 
         self.logger.info(
-            "makeToolTar starting with tool test retcode=%d\n" % test_retcode
+            "makeToolTar toold=%s starting with tool test retcode=%d\n" % (os.path.abspath(self.toold), test_retcode)
         )
         for p in self.outfiles:
             oname = p["name"]
@@ -1004,27 +1004,33 @@ class Tool_Factory:
                 self.logger.info("Copied %s to %s" % (src, dest))
             else:
                 dest = os.path.join(
-                    self.repdir, "%s_sample_%s.%s_EMPTY_PLEASE_FIX" % (oname, p["format"], p["format"])
+                    self.tooltestd, "%s_sample_%s.%s_EMPTY_PLEASE_FIX" % (oname, p["format"], p["format"])
                 )
                 f = open(dest,'w')
                 f.close()
         td = os.listdir(self.tooltestd)
+        # if test_retcode:
+            # for src in td:
+                # dest = os.path.join(self.repdir, src)
+                # shutil.copyfile(os.path.join(self.tooltestd, src), dest)
+                # self.logger.info("Copied %s %s\n" % (src, dest))
+        nottested =  f"{self.tool_name}_UNTESTED_toolshed.gz"
+        tested = f"{self.tool_name}_toolshed.gz"
         if test_retcode:
-            for src in td:
-                dest = os.path.join(self.repdir, src)
-                shutil.copyfile(os.path.join(self.tooltestd, src), dest)
-                self.logger.info("Copied %s %s\n" % (src, dest))
-        if test_retcode:
-            tardest = os.path.join(self.repdir, f"{self.tool_name}_UNTESTED_toolshed.gz")
+            tardest = os.path.join(self.repdir, nottested)
         else:
-            tardest = os.path.join(self.repdir, f"{self.tool_name}_toolshed.gz")
+            tardest = os.path.join(self.repdir, tested)
+        han, tartmp = tempfile.mkstemp()
         tf = tarfile.open(tardest, "w:gz")
+
         tf.add(
-            name=self.toold,
+            name=os.path.abspath(self.toold),
             arcname=self.tool_name,
             filter=exclude_function,
         )
         tf.close()
+        #shutil.copy(tartmp, tardest)
+        #os.unlink(tartmp)
         if test_retcode and self.newtarpath:
             dest = self.newtarpath
             shutil.copy(

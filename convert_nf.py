@@ -34,7 +34,7 @@ def convertd(d):
     if "meta.yml" in fnames or "main.nf" in fnames or "main.nfcore" in fnames:
         amod(d, dlist)
     else:
-        for adir in dlist:
+        for adir in [x for x in dlist if os.path.isdir(x)]:
             moddir = os.listdir(adir)
             moddir = [os.path.join(adir, x) for x in moddir]
             print('calling convertd with adir =', adir, 'moddir', moddir)
