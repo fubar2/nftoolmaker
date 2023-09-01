@@ -3,6 +3,9 @@
 # august 2023
 # exploring nf-core modules as potential Galaxy tools
 # halted: too much work - needs the DSL to be parsed for the script templating.
+# working kind of september 21 but not worth trying all modules
+# maybe just save the testdata URI and parameters plus the TF command line as artifacts
+# then make a TF tool to generate a tool based on that command line so it can be fixed.
 
 import argparse
 import json
@@ -62,6 +65,7 @@ class ParseNFMod:
         f = open(self.chainedtestout,'w')
         f.close()
         self.testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
+        self.modroot = os.path.split(nfargs.nftext)[0]
         self.tool_name = nfy["name"].replace("'",'').lower().strip()
         self.toold = os.path.join(args.collpath,'tools', self.tool_name)
         self.repd = os.path.join(args.collpath,'TFouts', self.tool_name)
@@ -491,15 +495,28 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         TODO: substitute right parameter names
 
         oh dear. gzip isn't in the container is it? Let's just remove | gzip -c > every time we see it
+        script:
+        template 'affy_justrma.R'
+
 
         """
         sexe = None
-        sss = ss.split('"""')
-        if len(sss) < 2:
-            sys.stderr.write('@@@@ cannot find a script in %s so cannot build' % self.tool_name)
-            sys.exit(0)
+        if 'template' in ss:
+            templatedir = os.path.join(self.modroot, 'templates')
+            tlist = os.listdir(templatedir)
+            tfile = os.path.join(templatedir, tlist[0])
+            try:
+                s = open(tfile,'r').read()
+            except:
+                print('Cannot find template', tfile, 'in', tlist)
+                sys.stderr.write('@@@@ cannot find a script in %s so cannot build' % self.tool_name)
         else:
-             s = sss[1]
+            sss = ss.split('"""')
+            if len(sss) < 2:
+                sys.stderr.write('@@@@ cannot find a script in %s so cannot build' % self.tool_name)
+                sys.exit(0)
+            else:
+                 s = sss[1]
         for pfmt in self.scriptPrefixSubs.keys():
             subme = self.scriptPrefixSubs[pfmt]
             s = s.replace('${prefix}.%s' % pfmt, subme)

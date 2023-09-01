@@ -47,8 +47,11 @@ a("--mod", default = None, required=False)
 args = parser.parse_args()
 modlist = os.listdir(corepath)
 
-if args.mod and args.mod in modlist:
-    convertd(os.path.join(corepath, args.mod))
+if args.mod:
+    if args.mod in modlist:
+        convertd(os.path.join(corepath, args.mod))
+    else:
+        print('Cannot find module', args.mod)
 else:
     for i,d in enumerate(modlist):
         convertd(os.path.join(corepath, d))
