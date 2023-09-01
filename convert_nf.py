@@ -7,7 +7,8 @@ import os
 import subprocess
 
 corepath = '../nfcore_modules/modules/nf-core'
-cl = ["python", "nftoolmaker.py",  "--galaxy_root", "nfmod_tools", "--toolfactory_dir", "./"]
+cl = ["python", "nftoolmaker.py",  "--galaxy_root", "/home/ross/rossgit/galaxytf", "--toolfactory_dir",
+  "/home/ross/rossgit/galaxytf/local_tools/toolfactory", "--nftest", "--collpath",  "/home/ross/rossgit/galaxytf/local_tools"]
 
 def amod(mod, dlist):
 

@@ -59,6 +59,7 @@ class ParseNFMod:
     """
 
     def __init__(self, nft, nfy, args):
+        self.infileurls = []
         self.canTest = True # build even if false?
         self.testParamList = None
         self.chainedtestout = 'chainedtests.xls'
@@ -67,7 +68,14 @@ class ParseNFMod:
         self.testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
         self.modroot = os.path.split(nfargs.nftext)[0]
         self.tool_name = nfy["name"].replace("'",'').lower().strip()
-        self.toold = os.path.join(args.collpath,'tools', self.tool_name)
+        self.tfcl = ["--parampass", "embednfmod"]
+        if args.nftest: # default is not
+            self.tfcl.append("--nftest")
+        self.local_tools = os.path.join(args.collpath, "tools")
+        self.toold = os.path.join(self.local_tools, self.tool_name)
+        if args.nftest:
+            self.local_tools = os.path.join(args.galaxy_root, "local_tools")
+            self.toold = os.path.join(args.collpath, self.tool_name)
         self.repdir = os.path.join(args.collpath,'TFouts', self.tool_name)
         self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
         self.tooltestd = os.path.join(self.toold, 'test-data') # for test input files to go
@@ -83,7 +91,6 @@ class ParseNFMod:
         self.args = args
         self.localTestFile =  "nfgenomicstestdata.txt"
         self.setTestFiles() # setup crosswalk for test downloads
-        self.tfcl = ["--parampass", "embednfmod"]
         if args.nftest: # default is not
             self.tfcl.append("--nftest")
         self.inparamnames = []
@@ -189,6 +196,17 @@ class ParseNFMod:
                 "not found",
             )
 
+    def failtool(self):
+        """
+        move to failed
+        """
+        faildir = os.path.join(self.local_tools,"failed", self.tool_name)
+        cl = ["mv", self.toold, faildir]
+        p = subprocess.run(cl)
+        print("$$$$$ moved failed tool", self.tool_name, "to", faildir)
+
+
+
     def fixTDPath(self, p):
         """
         replace file paths with real urls
@@ -251,18 +269,21 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
                 if not 'fasta' in fixedfmt:
                     fixedfmt.append('fasta')
             elif swaps.get(f, None):
+                f = swaps[f]
                 if not f in fixedfmt:
-                    fixedfmt.append(swaps[f])
+                    fixedfmt.append(f)
             else:
                 print('info: non-substituted format',f,'encountered in the input ppattern', pfmt)
                 fixedfmt.append(f)
-        return ','.join(fixedfmt)
+        s = list(set(fixedfmt))
+        return ','.join(s)
 
-    def saveTestdata(self, pname, testDataURL):
+    def saveTestdata(self,pname, testDataURL):
         """
         may need to be ungzipped and in test folder
         """
         localpath = os.path.join(self.tooltestd, "%s_sample" % pname)
+        print("save", testDataURL, 'for', pname, 'to', localpath)
         if not os.path.exists(localpath):
             cl = ["wget", "--timeout", "5", "--tries", "2", "-O", localpath, testDataURL]
             if testDataURL.endswith('.gz'): # major kludge as usual...
@@ -321,6 +342,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         else:
             rawf = self.testParamList[indx]
             tdURL = self.fixTDPath(rawf)
+        self.infileurls.append(tdURL)
         if not ppath:
             ppath = pid
         plabel = inpdict[pid]["description"].replace('\n',' ')
@@ -338,7 +360,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         pdict["required"] = "0"
         self.tfcl.append("--input_files")
         self.tfcl.append(json.dumps(pdict))
-        self.saveTestdata(pid, tdURL)
+        #self.saveTestdata(pid, tdURL)
 
     def makeOutfile(self, inpdict):
         """
@@ -576,7 +598,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             s = '\n'.join(ss)
         s = s.replace('"${task.process}"', '"${task_process}"')
         s = ''.join(fiddled) + s
-        self.scriptPath = os.path.join(self.toold, '%s.%s' % (self.tool_name, sexe))
+        self.scriptPath = os.path.join(self.toold, '%s_%s' % (self.tool_name, sexe))
         with open(self.scriptPath, "w") as f:
             f.write(s)
             f.write("\n")
@@ -686,36 +708,43 @@ if __name__ == "__main__":
     if args.nftest:
         tf.writeShedyml()
         res = tf.update_toolconf()
-        if tf.condaenv and len(tf.condaenv) > 0:
-            tf.install_deps()
-            logger.debug("Toolfactory installed deps. Calling fast test")
-        time.sleep(2)
-        testret = tf.planemo_local_test()
-        logger.debug("Toolfactory finished test")
-        if int(testret) > 0:
-            logger.error("ToolFactory tool build and test failed. :(")
-            logger.info(
-                "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
-            )
-            logger.info("when tested with galaxy_tool_test.  Error code:%d" % testret, ".")
-            logger.info(
-                "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
-            )
-            logger.info(
-                "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
-            )
-            logger.info(
-                "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
-            )
-            logger.info(
-                "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
-            )
-            logging.shutdown()
-            #tf.makeToolTar(1)
+        if res:
+            logger.error("###### update toolconf failed - is the galaxy server needed for tests available?")
+            nfmod.failtool()
         else:
-            pass
-            #tf.makeToolTar()
-    else:
-        pass
-        #tf.makeToolTar(1)
+            if tf.condaenv and len(tf.condaenv) > 0:
+                tf.install_deps()
+                logger.debug("Toolfactory installed deps. Calling fast test")
+                time.sleep(2)
+            for indx, d in enumerate(nfmod.inputpar): # need these for tests
+                pname = list(d.keys())[0]
+                ptype = d[pname]["type"]
+                if ptype.startswith('file'):
+                    nfmod.saveTestdata(pname, nfmod.infileurls[indx]) # only do this if the tool seems to install
+            testret = tf.planemo_local_test()
+            logger.debug("Toolfactory finished test")
+            if int(testret) > 0:
+                logger.error("ToolFactory tool build and test failed. :(")
+                logger.info(
+                    "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
+                )
+                logger.info("when tested with galaxy_tool_test.  Error code:%d" % int(testret), ".")
+                logger.info(
+                    "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
+                )
+                logger.info(
+                    "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
+                )
+                logger.info(
+                    "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
+                )
+                logger.info(
+                    "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
+                )
+                logging.shutdown()
+                nfmod.failtool()
+                #tf.makeToolTar(1)
+            else:
+                pass
+                tf.makeToolTar()
     logging.shutdown()

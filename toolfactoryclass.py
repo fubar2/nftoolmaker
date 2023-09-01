@@ -53,6 +53,8 @@ class Tool_Factory:
         prepare command line cl for running the tool here
         and prepare elements needed for galaxyxml tool generation
         """
+
+        self.args = args
         # sed will update these settings during tfsetup.py first run
         self.GALAXY_ADMIN_KEY = "956432473193251840"
         self.GALAXY_URL = "http://localhost:8080"
@@ -79,8 +81,8 @@ class Tool_Factory:
         self.tool_name = re.sub("[^a-zA-Z0-9_]+", "", args.tool_name)
         self.tool_id = self.tool_name
         if self.nfcoremod:
-            self.local_tools = os.path.join(args.tfcollection, "tools")
-        else:
+                self.local_tools = os.path.join(args.tfcollection, "tools")
+        if args.nftest:
             self.local_tools = os.path.join(args.galaxy_root, "local_tools")
         os.makedirs(self.local_tools, exist_ok=True)
         self.local_tool_conf = os.path.join(self.local_tools, "local_tool_conf.xml")
@@ -153,7 +155,6 @@ class Tool_Factory:
             self.logger.error(
                 f"--selectflag_parameters {args.selecttext_parameters} is malformed - should be a dictionary"
             )
-        self.args = args
         self.cleanuppar()
         self.lastxclredirect = None
         self.xmlcl = []
@@ -1077,6 +1078,7 @@ class Tool_Factory:
         try:
             p = subprocess.run(
                 " ".join(cl),
+                timeout = 60,
                 shell=True,
                 cwd=self.toold,
                 capture_output=True,
