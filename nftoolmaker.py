@@ -482,14 +482,18 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         "conda-forge::r-ampir=1.1.0"
         """
-        c = cs[0].replace('"', "").split("::")[1].strip()
-        req = [c]
-        if self.scriptExe:
-            self.tfcl.append("--sysexe")
-            self.tfcl.append(self.scriptExe.strip())
-        creq = ",".join(req)
-        self.tfcl.append("--packages")
-        self.tfcl.append(creq)
+        if "::" in cs[0]:
+            c = cs[0].replace('"', "").split("::")[1].strip()
+            req = [c]
+            if self.scriptExe:
+                self.tfcl.append("--sysexe")
+                self.tfcl.append(self.scriptExe.strip())
+            creq = ",".join(req)
+            self.tfcl.append("--packages")
+            self.tfcl.append(creq)
+    else:
+        print('@@@@@ Cannot parse ',cs, 'into Conda packages. Cannot build', self.tool_name)
+        sys.exit(0)
 
     def makeScript(self, ss):
         """
