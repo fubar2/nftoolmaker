@@ -882,10 +882,7 @@ class Tool_Factory:
                         )
                         self.condaenv.append(d)
             except Exception:
-                self.logger.error(
-                    "### malformed packages string supplied - cannot parse = %s" %
-                    self.args.packages
-                )
+                self.logger.error("### malformed packages string supplied - cannot parse = %s" % self.args.packages)
                 sys.exit(2)
         self.newtool.requirements = requirements
         if self.args.parampass == "0":
