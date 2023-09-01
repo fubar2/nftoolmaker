@@ -135,7 +135,12 @@ class ParseNFMod:
             else:
                 print("### unknown output type encountered in %s" % str(inpdict))
         self.scriptExe = self.makeScript(self.getsection("script:"))
-        self.makePackages(self.getlinestart("conda"))
+        cond = self.getlinestart("conda")
+        cont = self.getlinestart("container")
+        if len(cond) > 0:
+            self.makePackages(cond[0])
+        else:
+            self.makePackages(cont[0])
         self.tfcl += self.cl_coda
         self.tfcl = [x for x in self.tfcl if x.strip() > ""]
 
@@ -144,7 +149,7 @@ class ParseNFMod:
         td = [x.strip() for x in td]
         td = [
             "/".join(x.strip().split("/")[1:]) for x in td
-        ]  # remove bogus "branches/"
+        ]  # remove bogus "branches/"LA
         file_dict = {}
         totdups = 0
         for x in td:
@@ -481,9 +486,11 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
     def makePackages(self, cs):
         """
         "conda-forge::r-ampir=1.1.0"
+        or
+        container "docker.io/nfcore/cellrangermkfastq:7.1.0"
         """
-        if "::" in cs[0]:
-            c = cs[0].replace('"', "").split("::")[1].strip()
+        if "::" in cs:
+            c = cs.replace('"', "").split("::")[1].strip()
             req = [c]
             if self.scriptExe:
                 self.tfcl.append("--sysexe")
@@ -492,8 +499,11 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             self.tfcl.append("--packages")
             self.tfcl.append(creq)
         else:
-            print('@@@@@ Cannot parse ',cs, 'into Conda packages. Cannot build', self.tool_name)
-            sys.exit(0)
+            if cs[0].strip().lower() == "container":
+                self.tfcl.append("--container")
+                self.tfcl.append(cs.split[1])
+            else:
+                print('@@@@@ Cannot parse requirements ',cs, 'into container or Conda packages for ', self.tool_name)
 
     def makeScript(self, ss):
         """
@@ -630,6 +640,7 @@ if __name__ == "__main__":
         a("--admin_only", default=True, action="store_true")
         a("--tested_tool_out", default=None)
         a("--tool_conf_path", default="config/tool_conf.xml")  # relative to $__root_dir__
+        a("--container", default=None,required=False)
         a("--xtra_files",
             default=[],
             action="append",
@@ -671,6 +682,7 @@ if __name__ == "__main__":
     logger.addHandler(fh)
     tf = Tool_Factory(args)
     tf.makeTool()
+    tf.writeTFyml()
     if args.nftest:
         tf.writeShedyml()
         res = tf.update_toolconf()

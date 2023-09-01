@@ -363,7 +363,10 @@ class Tool_Factory:
         rxcheck = [x.strip() for x in rx if x.strip() > ""]
         assert len(rxcheck) > 0, "Supplied script is empty. Cannot run"
         self.script = "\n".join(rxcheck)
-        self.scriptname = '%s_%s' % (self.tool_name, self.executeme[0])
+        if self.executeme:
+            self.scriptname = '%s_%s' % (self.tool_name, self.executeme[0])
+        else:
+            self.scriptname = '%s.script' % (self.tool_name)
         self.scriptpath = os.path.join(self.toold, self.scriptname)
         tscript = open(self.scriptpath, "w")
         tscript.write(self.script)
@@ -884,6 +887,9 @@ class Tool_Factory:
             except Exception:
                 self.logger.error("### malformed packages string supplied - cannot parse = %s" % self.args.packages)
                 sys.exit(2)
+        elif self.args.container:
+            requirements.append(
+                            gxtp.Requirement("container", self.args.container)                        )
         self.newtool.requirements = requirements
         if self.args.parampass == "0":
             self.doNoXMLparam()
@@ -934,6 +940,14 @@ class Tool_Factory:
         }
         yaml.dump(odict, yamlf, allow_unicode=True)
         yamlf.close()
+
+    def writeTFyml(self):
+        """for posterity"""
+        yfname = os.path.join(self.repdir, "%s_ToolFactory.yml" % self.tool_name)
+        yamlf = open(yfname, "w")
+        yaml.dump(self.args, yamlf, allow_unicode=True)
+        yamlf.close()
+
 
     def makeTool(self):
         """write xmls and input samples into place"""
@@ -1244,6 +1258,7 @@ def main():
     a("--install_flag", action="store_true", default=False)
     a("--admin_only", default=True, action="store_true")
     a("--tested_tool_out", default=None)
+    a("--container", default=None,required=False)
     a("--tool_conf_path", default="config/tool_conf.xml")  # relative to $__root_dir__
     a(
         "--xtra_files",
@@ -1273,6 +1288,7 @@ admin adds %s to "admin_users" in the galaxy.yml Galaxy configuration file'
     tf = Tool_Factory(args)
     tf.makeTool()
     tf.writeShedyml()
+    tf.writeTFyml()
     res = tf.update_toolconf()
     dotest = args.nftest
     if res:
