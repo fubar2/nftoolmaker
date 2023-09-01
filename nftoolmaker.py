@@ -252,7 +252,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         localpath = os.path.join(self.tooltestd, "%s_sample" % pname)
         if not os.path.exists(localpath):
-            cl = ["wget", "--timeout", "10", "-O", localpath, testDataURL]
+            cl = ["wget", "--timeout", "5", "--tries", "2", "-O", localpath, testDataURL]
             if testDataURL.endswith('.gz'): # major kludge as usual...
                 gzlocalpath = "%s.gz" % localpath
                 cl = ["wget", "-q", "-O", gzlocalpath, testDataURL, "&&", "rm", "-f", localpath, "&&", "gunzip", gzlocalpath]
@@ -337,7 +337,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         pdict = {}
         pname = list(inpdict.keys())[0]
         plabel = inpdict[pname]["description"].replace('\n',' ')
-        ppattern = inpdict[pname]["pattern"]
+        ppattern = inpdict[pname].get("pattern", "missing")
         if ppattern == "versions.yml":
             return  # ignore these artifacts
         ppattern = ppattern.translate({ord(i): None for i in FILTERCHARS})
@@ -372,7 +372,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         else:
             pval = self.testParamList[indx]
         pname = list(inpdict.keys())[0]
-        ppattern = inpdict[pname]["pattern"]
+        ppattern = inpdict[pname].get("pattern", "missing")
         plabel = inpdict[pname]["description"].replace('\n',' ')
         if ppattern.startswith("{") and ppattern.endswith("}"):
             # is a select comma separated list
