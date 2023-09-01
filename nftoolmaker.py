@@ -76,6 +76,9 @@ class ParseNFMod:
         pathlib.Path(self.repd).mkdir(parents=True, exist_ok=True)
         self.scriptPrefixSubs = {}
         self.nftext = nft
+        if "secret 'SENTIEON_LICENSE_" in nft:
+            print("!!!!!!!!!!!!!!! Refusing to build a tool for a proprietary licenced binary !!!!!!!!!!!!!!!!!!!!")
+            sys.exit(0)
         self.nfyaml = nfy
         self.args = args
         self.localTestFile =  "nfgenomicstestdata.txt"
