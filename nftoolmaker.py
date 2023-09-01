@@ -248,7 +248,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         localpath = os.path.join(self.tooltestd, "%s_sample" % pname)
         if not os.path.exists(localpath):
-            cl = ["wget", "-O", localpath, testDataURL]
+            cl = ["wget", "--timeout", "10", "-O", localpath, testDataURL]
             if testDataURL.endswith('.gz'): # major kludge as usual...
                 gzlocalpath = "%s.gz" % localpath
                 cl = ["wget", "-q", "-O", gzlocalpath, testDataURL, "&&", "rm", "-f", localpath, "&&", "gunzip", gzlocalpath]
@@ -264,7 +264,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         print('flag indx',indx, self.testParamList)
         pdict = {}
-        if indx > len(self.testParamList):
+        if indx > (len(self.testParamList) - 1):
             print('Makeflag parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
             self.canTest = False
             pval = "missing"
@@ -298,7 +298,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         pdict = {}
         pid = list(inpdict.keys())[0]
         ppath = pid
-        if indx > len(self.testParamList):
+        if indx > (len(self.testParamList) - 1):
             print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
             self.canTest = False
             tdURL = "missing"
@@ -361,7 +361,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         print('str indx',indx, self.testParamList)
         pdict = {}
-        if indx > len(self.testParamList):
+        if indx > (len(self.testParamList) -1) :
             print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
             self.canTest = False
             pval = "missing"
@@ -672,9 +672,10 @@ if __name__ == "__main__":
                 "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
             )
             logging.shutdown()
-            tf.makeToolTar(1)
+            #tf.makeToolTar(1)
         else:
-            tf.makeToolTar()
+            #tf.makeToolTar()
     else:
-        tf.makeToolTar(1)
+        pass
+        #tf.makeToolTar(1)
     logging.shutdown()

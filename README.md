@@ -18,8 +18,8 @@ it's much easier for me to just clean up the test sections to extract
 the test files and parameter values using row based script hackery.
 
 
-The collection is huge ~12GB with all the redundant test data sets.
-This will be fixed soon with URI for all test data but can't do that
+The collection is huge - 20+GB with all the redundant test data sets!
+This will be fixed soon with URI for all test data paths, but can't do that
 until the ToolFactory is working in release 23.1 - was broken because
 many of the utilities had an incompatible version of galaxy-util or
 tool-util - should be fixed once the release is done.
