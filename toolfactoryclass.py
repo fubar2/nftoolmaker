@@ -868,7 +868,7 @@ class Tool_Factory:
                     d = d.replace("==", ":")
                     d = d.replace("=", ":")
                     if ":" in d:
-                        packg, ver = d.split(":")
+                        packg, ver = d.split(":")[:2]
                         ver = ver.strip()
                         packg = packg.strip()
                     else:
@@ -883,8 +883,8 @@ class Tool_Factory:
                         self.condaenv.append(d)
             except Exception:
                 self.logger.error(
-                    "### malformed packages string supplied - cannot parse =",
-                    self.args.packages,
+                    "### malformed packages string supplied - cannot parse = %s" %
+                    self.args.packages
                 )
                 sys.exit(2)
         self.newtool.requirements = requirements
