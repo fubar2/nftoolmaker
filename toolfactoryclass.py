@@ -364,7 +364,7 @@ class Tool_Factory:
         assert len(rxcheck) > 0, "Supplied script is empty. Cannot run"
         self.script = "\n".join(rxcheck)
         self.scriptname = '%s_%s' % (self.tool_name, self.executeme[0])
-        self.scriptpath = os.path.join(self.repdir, self.scriptname)
+        self.scriptpath = os.path.join(self.toold, self.scriptname)
         tscript = open(self.scriptpath, "w")
         tscript.write(self.script)
         tscript.close()
@@ -374,10 +374,6 @@ class Tool_Factory:
         rxcheck.insert(0, "#raw")
         rxcheck.append("#end raw")
         self.escapedScript = rxcheck
-        # art = "%s.%s" % (self.tool_name, self.executeme[0])
-        # artifact = open(art, "wb")
-        # artifact.write(bytes(self.script, "utf8"))
-        # artifact.close()
 
     def cleanuppar(self):
         """positional parameters are complicated by their numeric ordinal"""
@@ -954,8 +950,6 @@ class Tool_Factory:
                 shutil.copyfile(self.scriptpath, stname)
         exml = "%s.xml" % self.tool_name
         xout = os.path.join(self.toold, exml)
-        #shutil.copyfile(os.path.join(self.toold, xout)
-        #self.logger.info("Copied %s to %s" % (xreal, xout))
         xrename = "%s_toolxml.xml" % self.tool_name
         xrout = os.path.join(self.repdir, xrename)
         shutil.copyfile(xout, xrout)

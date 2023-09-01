@@ -68,12 +68,12 @@ class ParseNFMod:
         self.modroot = os.path.split(nfargs.nftext)[0]
         self.tool_name = nfy["name"].replace("'",'').lower().strip()
         self.toold = os.path.join(args.collpath,'tools', self.tool_name)
-        self.repd = os.path.join(args.collpath,'TFouts', self.tool_name)
+        self.repdir = os.path.join(args.collpath,'TFouts', self.tool_name)
         self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
         self.tooltestd = os.path.join(self.toold, 'test-data') # for test input files to go
         pathlib.Path(self.toold).mkdir(parents=True, exist_ok=True)
         pathlib.Path(self.tooltestd).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.repd).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.repdir).mkdir(parents=True, exist_ok=True)
         self.scriptPrefixSubs = {}
         self.nftext = nft
         if "secret 'SENTIEON_LICENSE_" in nft:
@@ -89,7 +89,11 @@ class ParseNFMod:
         self.inparamnames = []
         self.outparamnames = []
         self.inputpar = []
-        print('nfy[input]', nfy["input"])
+        nfyin = nfy.get("input", None)
+        print('nfy[input]', nfyin)
+        if not nfyin:
+            print('### refusing to build a tool without inputs found in yaml')
+            sys.exit(0)
         for d in nfy["input"]:
             pname = list(d.keys())[0]
             ptype = d[pname]["type"]
@@ -558,9 +562,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             s = '\n'.join(ss)
         s = s.replace('"${task.process}"', '"${task_process}"')
         s = ''.join(fiddled) + s
-        scriptf, self.scriptPath = tempfile.mkstemp(
-            suffix=".script", prefix="nftoolmaker", dir=None, text=True
-        )
+        self.scriptPath = os.path.join(self.toold, '%s.%s' % (self.tool_name, sexe))
         with open(self.scriptPath, "w") as f:
             f.write(s)
             f.write("\n")
@@ -650,11 +652,13 @@ if __name__ == "__main__":
     collpath = nfargs.collpath
     cl = nfmod.tfcl
     print("cl=", "\n".join(cl))
+    with open(os.path.join(nfmod.repdir, 'ToolFactoryCL_%s.txt' % nfmod.tool_name), 'w') as fout:
+        fout.write("\n".join(cl))
     args = prepargs(cl)
     assert (
         args.tool_name
     ), "## This nf-core module ToolFactory cannot build a tool without a tool name. Please supply one."
-    logfilename = os.path.join(nfmod.repd, "nfmodToolFactory_make_%s_log.txt" % args.tool_name)
+    logfilename = os.path.join(nfmod.repdir, "nfmodToolFactory_make_%s_log.txt" % args.tool_name)
     if not os.path.exists(collpath):
         os.makedirs(collpath, exist_ok=True)
     logger.setLevel(logging.INFO)
