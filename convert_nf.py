@@ -18,7 +18,7 @@ def amod(mod, dlist):
         yam = y[0]
         tex = [x for x in dlist if x.endswith('.nfcore') or x.endswith('.nf')][0]
         acl = cl + ["--nftext", tex, "--nfyml", yam, "--collpath",  "/home/ross/rossgit/galaxytf/local_tools/TF/%s" % os.path.split(mod)[1]]
-        print('### amod calling nftoolmaker with', acl)
+        print('### amod ', mod, 'calling nftoolmaker with', acl)
         p = subprocess.run(acl)
         print('### stdout ', p.stdout, 'stderr', p.stderr)
     else:

@@ -67,177 +67,6 @@ class Tool_Factory:
         # sed will update these settings during tfsetup.py first run
         self.GALAXY_ADMIN_KEY = "956432473193251840"
         self.GALAXY_URL = "http://localhost:8080"
-        # self.myversion = "V3.0 February 2023"
-        # self.verbose = True
-        # self.debug = True
-        # self.toolFactoryURL = "https://github.com/fubar2/galaxy_tf_overlay"
-        # self.logger = logging.getLogger(__name__)
-        # self.tool_version = args.tool_version
-        # self.nfcoremod = False
-        # if args.parampass == "embednfmod":
-            # self.nfcoremod = True
-        # self.script_in_help = False  # IUC recommendation
-        # self.tool_name = re.sub("[^a-zA-Z0-9_]+", "", args.tool_name)
-        # self.tool_id = self.tool_name
-        # self.local_tools = os.path.join(args.galaxy_root, "local_tools")
-        # if self.nfcoremod:
-                # self.local_tools = os.path.join(args.tfcollection, "tools")
-                # self.repdir = os.path.join(args.tfcollection, "TFouts", self.tool_name)
-                # self.toold = os.path.join(self.local_tools, self.tool_name)
-                # self.tooltestd = os.path.join(self.toold, "test-data")
-        # if args.nftest:
-                # self.local_tools = os.path.join(args.galaxy_root, "local_tools")
-                # self.repdir = args.tfcollection
-                # self.toold = os.path.join(self.local_tools, self.tool_name)
-                # self.tooltestd = os.path.join(self.toold, "test-data")
-        # os.makedirs(self.repdir, exist_ok=True)
-        # os.makedirs(self.toold, exist_ok=True)
-        # os.makedirs(self.tooltestd, exist_ok=True)
-        # os.makedirs(self.local_tools, exist_ok=True)
-        # self.local_tool_conf = os.path.join(self.local_tools, "local_tool_conf.xml")
-        # self.ourcwd = os.getcwd()
-        # self.collections = []
-        # if len(args.collection) > 0:
-            # try:
-                # self.collections = [
-                    # json.loads(x) for x in args.collection if len(x.strip()) > 1
-                # ]
-            # except Exception:
-                # self.logger.error(
-                    # f"--collections parameter {str(args.collection)} is malformed - should be a dictionary"
-                # )
-        # self.infiles = []
-        # try:
-            # self.infiles = [
-                # json.loads(x) for x in args.input_files if len(x.strip()) > 1
-            # ]
-        # except Exception:
-            # self.logger.error(
-                # f"--input_files parameter {str(args.input_files)} is malformed - should be a dictionary"
-            # )
-        # self.extra_files = []
-        # if len(args.xtra_files) > 0:
-            # try:
-                # self.extra_files = [
-                    # json.loads(x) for x in args.xtra_files if len(x.strip()) > 1
-                # ]
-            # except Exception:
-                # self.logger.error(
-                    # f"--xtra_files parameter {str(args.xtra_files)} is malformed - should be a dictionary"
-                # )
-        # self.outfiles = []
-        # try:
-            # self.outfiles = [
-                # json.loads(x) for x in args.output_files if len(x.strip()) > 1
-            # ]
-        # except Exception:
-            # self.logger.error(
-                # f"--output_files parameter {args.output_files} is malformed - should be a dictionary"
-            # )
-        # assert (
-            # len(self.outfiles) + len(self.collections)
-        # ) > 0, "No outfiles or output collections specified. The Galaxy job runner will fail without an output of some sort"
-        # self.addpar = []
-        # try:
-            # self.addpar = [
-                # json.loads(x) for x in args.additional_parameters if len(x.strip()) > 1
-            # ]
-        # except Exception:
-            # self.logger.error(
-                # f"--additional_parameters {args.additional_parameters} is malformed - should be a dictionary"
-            # )
-        # self.selpar = []
-        # try:
-            # self.selpar = [
-                # json.loads(x) for x in args.selecttext_parameters if len(x.strip()) > 1
-            # ]
-        # except Exception:
-            # self.logger.error(
-                # f"--selecttext_parameters {args.selecttext_parameters} is malformed - should be a dictionary"
-            # )
-        # self.selfagpar = []
-        # try:
-            # self.selflagpar = [
-                # json.loads(x) for x in args.selectflag_parameters if len(x.strip()) > 1
-            # ]
-        # except Exception:
-            # self.logger.error(
-                # f"--selectflag_parameters {args.selecttext_parameters} is malformed - should be a dictionary"
-            # )
-        # self.cleanuppar()
-        # self.lastxclredirect = None
-        # self.xmlcl = []
-        # self.is_positional = self.args.parampass == "positional"
-        # self.is_embedded = self.args.parampass == "embedded"
-        # if self.args.sysexe:
-            # if " " in self.args.sysexe:
-                # self.executeme = shlex.split(self.args.sysexe)
-            # else:
-                # self.executeme = [
-                    # self.args.sysexe,
-                # ]
-        # else:
-            # if self.args.packages:
-                # self.executeme = [
-                    # self.args.packages.split(",")[0].split(":")[0].strip(),
-                # ]
-            # else:
-                # self.executeme = None
-        # aXCL = self.xmlcl.append
-        # self.newtarpath = args.tested_tool_out
-        # self.tinputs = gxtp.Inputs()
-        # self.toutputs = gxtp.Outputs()
-        # self.testparam = []
-        # if self.args.script_path:
-            # self.prepScript()
-        # else:
-            # self.script = None
-        # if self.args.cl_override != None:
-            # scos = open(self.args.cl_override, "r").readlines()
-            # self.cl_override = [x.rstrip() for x in scos]
-        # else:
-            # self.cl_override = None
-        # if self.args.test_override != None:
-            # stos = open(self.args.test_override, "r").readlines()
-            # self.test_override = [x.rstrip() for x in stos]
-        # else:
-            # self.test_override = None
-        # if self.args.cl_prefix != None:
-            # scos = open(self.args.cl_prefix, "r").readlines()
-            # self.cl_prefix = [x.rstrip() for x in scos]
-        # else:
-            # self.cl_prefix = None
-        # if self.args.cl_suffix != None:
-            # stos = open(self.args.cl_suffix, "r").readlines()
-            # self.cl_suffix = [x.rstrip() for x in stos]
-        # else:
-            # self.cl_suffix = None
-        # if self.args.script_path:
-            # for ex in self.executeme:
-                # if ex:
-                    # aXCL(ex)
-            # aXCL("'$runme'")
-        # else:
-            # for ex in self.executeme:
-                # aXCL(ex)
-        # if self.args.parampass == "0":
-            # self.clsimple()
-        # elif self.args.parampass == "positional":
-            # self.prepclpos()
-            # self.clpositional()
-        # elif self.args.parampass == "argparse":
-            # self.prepargp()
-            # self.clargparse()
-        # elif self.args.parampass.startswith("embed"):
-            # self.prepembed()
-        # else:
-            # logging.error(
-                # "Parampass value %s not in 0, positional, argparse, embed or embednfmod"
-                # % self.args.parampass
-            # )
-            # logging.shutdown()
-            # sys.exit(6)
-
         self.GALAXY_URL = "http://localhost:8080"
         self.args = args
         self.myversion = "V3.0 February 2023"
@@ -536,15 +365,16 @@ class Tool_Factory:
             self.sfile = os.path.join(self.repdir, "%s.script" % (self.tool_name, self.executeme[0]))
         tscript = open(self.sfile, "w")
         tscript.write(self.script)
+        tscript.write('\n')
         tscript.close()
         self.spacedScript = [f"    {x.replace('${','$ {')}" for x in rx if x.strip() > ""]
         rxcheck.insert(0, '#raw')
         rxcheck.append('#end raw')
         self.escapedScript = rxcheck
-        art = '%s.%s' % (self.tool_name, self.executeme[0])
-        artifact = open(art, "wb")
-        artifact.write(bytes(self.script, "utf8"))
-        artifact.close()
+        # art = '%s.%s' % (self.tool_name, self.executeme[0])
+        # artifact = open(art, "wb")
+        # artifact.write(bytes(self.script, "utf8"))
+        # artifact.close()
 
     def cleanuppar(self):
         """positional parameters are complicated by their numeric ordinal"""
@@ -774,7 +604,7 @@ class Tool_Factory:
                     newname,
                     label=newlabel,
                     help=newhelp,
-                    value=newval,
+                    value=int(newval.replace("'", "").replace('"', "")),
                     num_dashes=ndash,
                 )
             elif newtype == "float":
@@ -782,7 +612,7 @@ class Tool_Factory:
                     newname,
                     label=newlabel,
                     help=newhelp,
-                    value=newval,
+                    value=float(newval.replace("'", "").replace('"', "")),
                     num_dashes=ndash,
                 )
             elif newtype == "boolean":
@@ -1008,8 +838,8 @@ class Tool_Factory:
         self.newtool.citations = cite
         safertext = ""
         if self.args.help_text:
-            helptext = open(self.args.help_text, "r").readlines()
-            safertext = "\n".join([self.cheetah_escape(x) for x in helptext])
+            self.helptext = open(self.args.help_text, "r").readlines()
+            safertext = "\n".join([self.cheetah_escape(x) for x in self.helptext])
         if len(safertext.strip()) == 0:
             safertext = (
                 "Ask the tool author (%s) to rebuild with help text please\n"
@@ -1049,14 +879,11 @@ class Tool_Factory:
                 )
         self.newtool.version_command = f'echo "{self.tool_version}"'
         std = gxtp.Stdios()
-        # s1 = gxtp.Stdio(range=":-1", level="fatal", description="Error occurred. Please check Tool Standard Error")
-        # s2 = gxtp.Stdio(range="137", level="fatal_oom", description="Out of Memory")
-        # s3 = gxtp.Stdio(range="1:", level="fatal", description="Error occurred. Please check Tool Standard Error")
-        s1 = gxtp.Stdio(":-1", level="fatal")
-        s2 = gxtp.Stdio("137", level="fatal_oom")
-        s3 = gxtp.Stdio("1:", level="fatal")
-        std.append(s1)
+        s1 = gxtp.Stdio(":-1", level="fatal",  description="Please check Tool Standard Error using the result i(information) link - the tool failed")
+        s2 = gxtp.Stdio("137", level="fatal_oom",  description="Out of memory error.")
+        s3 = gxtp.Stdio("1:", level="fatal", description="Please check Tool Standard Error using the result i(information) link - the tool failed")
         std.append(s2)
+        std.append(s1)
         std.append(s3)
         self.newtool.stdios = std
         if self.args.parampass == "0":
@@ -1091,7 +918,7 @@ class Tool_Factory:
         with open(os.path.join(self.toold,"%s.xml" % self.tool_name), "w") as xf:
             xf.write(exml)
             xf.write("\n")
-        # galaxy history item
+
 
     def writeShedyml(self):
         """for planemo"""
@@ -1111,9 +938,12 @@ class Tool_Factory:
 
     def writeTFyml(self):
         """for posterity"""
+        tooldict = copy.copy(self.args)
+        tooldict["script"] = self.script
+        tool["help"] = self.helptext
         yfname = os.path.join(self.repdir, "%s_ToolFactory.yml" % self.tool_name)
         yamlf = open(yfname, "w")
-        yaml.dump(self.args, yamlf, allow_unicode=True)
+        yaml.dump(tool, yamlf, allow_unicode=True)
         yamlf.close()
 
 
@@ -1156,11 +986,11 @@ class Tool_Factory:
 
     def makeToolTar(self, test_retcode=0):
         """move outputs into test-data and prepare the tarball"""
-        excludeme = "_planemo_test_report.html"
+        excludeme = "tool_test_output"
 
         def exclude_function(tarinfo):
             filename = tarinfo.name
-            return None if filename.endswith(excludeme) else tarinfo
+            return None if filename.startswith(excludeme) else tarinfo
         logger.info("makeToolTar starting with tool test retcode=%d\n" % test_retcode)
         for p in self.outfiles:
             oname = p["name"]
@@ -1168,11 +998,10 @@ class Tool_Factory:
             dest = os.path.join(self.repdir, "%s_sample_%s.%s" % (oname, p["format"], p["format"]))
             shutil.copyfile(src, dest)
             logger.info("Copied %s to %s" % (src, dest))
-        td = os.listdir(self.tooltestd)
-        for src in td:
-            dest = os.path.join(self.repdir, src)
-            shutil.copyfile(os.path.join(self.tooltestd, src), dest)
-            logger.info("Copied %s %s\n" % (src, dest))
+        td = os.listdir(self.toold)
+        for f in td:
+            if f.startswith("tool_test_output"):
+                os.unlink(os.path.join(self.toold,f))
         if self.newtarpath:
             tf = tarfile.open(self.newtarpath, "w:gz")
             print('ls toold = ', os.listdir(self.toold))
@@ -1188,26 +1017,51 @@ class Tool_Factory:
         Seems ok if run as a shell script using the Galaxy installed planemo august 1st 2023
         """
         x = "%s.xml" % self.tool_name
-        xout = os.path.join(self.toold, x)
-        cl = ["planemo", "test", "--galaxy_admin_key", self.GALAXY_ADMIN_KEY, "--engine", "external_galaxy" , "--update_test_data",
-            "--galaxy_url", self.GALAXY_URL, xout]
-        clx= ["planemo", "test", "--galaxy_admin_key", "[GALAXY_ADMIN_KEY]", "--engine", "external_galaxy" , "--update_test_data",
-            "--galaxy_url", self.GALAXY_URL, xout]
-        logger.info('planemo_local_test executing: %s' % ' '.join(clx))
-        p = subprocess.run(
-            " ".join(cl),
-            shell=True,
-            cwd=self.toold,
-            capture_output=True,
-            check=True,
-            text=True
-        )
-        for errline in p.stderr.splitlines():
-            logger.info(errline)
-        dest = self.repdir
-        src = self.tooltestd
-        shutil.copytree(src, dest, dirs_exist_ok=True)
-        return p.returncode
+        xout = os.path.abspath(os.path.join(self.toold, x))
+        cl = [
+            "planemo",
+            "test",
+            "--galaxy_admin_key",
+            self.GALAXY_ADMIN_KEY,
+            "--engine",
+            "external_galaxy",
+            "--update_test_data",
+            "--galaxy_url",
+            self.GALAXY_URL,
+            xout,
+        ]
+        clx = [
+            "planemo",
+            "test",
+            "--galaxy_admin_key",
+            "[GALAXY_ADMIN_KEY]",
+            "--engine",
+            "external_galaxy",
+            "--update_test_data",
+            "--galaxy_url",
+            self.GALAXY_URL,
+            xout,
+        ]
+        self.logger.info("planemo_local_test executing: %s" % " ".join(clx))
+        try:
+            p = subprocess.run(
+                " ".join(cl),
+                timeout = 60,
+                shell=True,
+                cwd=self.toold,
+                capture_output=True,
+                check=True,
+                text=True,
+            )
+            for errline in p.stderr.splitlines():
+                self.logger.info(errline)
+            dest = self.repdir
+            src = self.tooltestd
+            shutil.copytree(src, dest, dirs_exist_ok=True)
+            return p.returncode
+        except:
+            return 1
+
 
     def fast_local_test(self):
         """

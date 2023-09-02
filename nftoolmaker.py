@@ -29,7 +29,7 @@ import sys
 import tarfile
 import tempfile
 import time
-
+from urllib.parse import urlparse
 from bioblend import galaxy
 from bioblend import ConnectionError
 
@@ -77,13 +77,13 @@ class ParseNFMod:
                 self.repdir = os.path.join(self.local_tools, "TF", self.tool_name)
                 self.toold = os.path.join(self.local_tools, self.tool_name)
                 self.tooltestd = os.path.join(self.toold, "test-data")
-                self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", "toolgen"]
+                self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", os.path.join(args.collpath,self.tool_name)]
         else:
                 self.local_tools = os.path.join(args.collpath, "tools")
-                self.repdir = os.path.join(args.collpath, "TFouts", self.tool_name)
+                self.repdir = os.path.join(args.collpath, "TF", self.tool_name)
                 self.toold = os.path.join(self.local_tools, self.tool_name)
                 self.tooltestd = os.path.join(self.toold, "test-data")
-                self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
+                self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", "toolgen"]
         os.makedirs(self.repdir, exist_ok=True)
         os.makedirs(self.toold, exist_ok=True)
         os.makedirs(self.tooltestd, exist_ok=True)
@@ -125,7 +125,7 @@ class ParseNFMod:
         self.getTestInfo()
         if self.inparamcount != len(self.testParamList):
             print("### inparamcount = ", self.inparamcount, 'but there are', len(self.testParamList), 'test parameters in', self.testParamList)
-            self.canTest = False
+            nfmod.failtool('paramcount')
         self.makeMeta()
         stub = self.getsection("stub:")  # not all have these - no idea what they're for
         for indx, inpdict in enumerate(self.inputpar):
@@ -217,8 +217,15 @@ class ParseNFMod:
         cl = ["mv", self.toold, faildir]
         p = subprocess.run(cl)
         print("$$$$$ moved failed tool", self.tool_name, "to", faildir)
+        logging.shutdown()
+        sys.exit(0)
 
-
+    def uri_validator(self, x):
+        try:
+            result = urlparse(x)
+            return True
+        except:
+            return False
 
     def fixTDPath(self, p):
         """
@@ -251,9 +258,12 @@ class ParseNFMod:
                     foundpath = self.testURLprefix + foundpaths[0]
         else: #'file(https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/delete_me/hmmer/bac.16S_rRNA.hmm.gz,'
             foundpath = p.replace('file(','').replace(',','').replace(')','')
+        validated = self.uri_validator(foundpath)
+        if not validated:
+            print('!!!!!!!!!!!!!!!!!!!!! TDPath foundpath', foundpath, 'is not a valid URL so this module test code should be fixed',args.nftex)
         if debug:
             print('fixTDPath returning', foundpath)
-        return foundpath
+        return foundpath, validated
 
 
     def fixParamFormat(self,pfmt):
@@ -295,6 +305,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         """
         may need to be ungzipped and in test folder
         """
+        res = 0
         localpath = os.path.join(self.tooltestd, "%s_sample" % pname)
         print("#### save", testDataURL, 'for', pname, 'to', localpath)
         if not os.path.exists(localpath):
@@ -307,6 +318,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
                 print("Got", p.returncode, "from executing", " ".join(cl))
         else:
             print('Not re-downloading', localpath)
+        return res
 
     def makeFlag(self, inpdict, indx):
         """
@@ -354,7 +366,10 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             tdURL = "missing"
         else:
             rawf = self.testParamList[indx]
-            tdURL = self.fixTDPath(rawf)
+            tdURL, validated = self.fixTDPath(rawf)
+        if not validated:
+            self.failtool('badurl')
+            sys.exit(0)
         self.infileurls.append(tdURL)
         if not ppath:
             ppath = pid
@@ -590,14 +605,14 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             for i, row in enumerate(ss): # replace bogus // with proper /
                 row = row.strip()
                 if "$args" in row: # this is such a kludge - who knows what the mad fuckers do with $args.
-                    fiddled.append('### full disclosure! nf-core $args has been removed by nftoolmaker.py\n')
+                    fiddled.append('### nf-core $args has been removed by nftoolmaker.py\n')
                     fixargs = True
                 elif row.rstrip().endswith(r'\\'):
                     ss[i] = ss[i][:-1]
                 elif 'gzip' in row:
                     row = row.replace('| gzip -c ','')
                     ss[i] = row
-                    fiddled.append('### full disclosure! | gzip -c removed by nftoolmaker.py\n')
+                    fiddled.append('### f| gzip -c removed by nftoolmaker.py\n')
                 elif row.startswith('mv '): # comment out as will fail probably
                     ss[i] = '## %s commented out by nftoolmaker as it will probably break' % ss[i]
                 elif row.startswith('gzip ') or row.startswith('gunzip'): # comment out as will fail probably
@@ -611,7 +626,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             s = '\n'.join(ss)
         s = s.replace('"${task.process}"', '"${task_process}"')
         s = ''.join(fiddled) + s
-        self.scriptPath = os.path.join(self.toold, '%s_%s' % (self.tool_name, sexe))
+        self.scriptPath = os.path.join(self.repdir, '%s.%s' % (self.tool_name, sexe))
         with open(self.scriptPath, "w") as f:
             f.write(s)
             f.write("\n")
@@ -717,7 +732,7 @@ if __name__ == "__main__":
     print("cl=", "\n".join(cl))
     tf = Tool_Factory(args)
     tf.makeTool()
-    tf.writeTFyml()
+    #tf.writeTFyml()
     if nfargs.nftest:
         tf.writeShedyml()
         res = tf.update_toolconf()
@@ -729,8 +744,9 @@ if __name__ == "__main__":
             for indx, d in enumerate(nfmod.inputpar): # need these for tests
                 pname = list(d.keys())[0]
                 ptype = d[pname]["type"]
-                if ptype.startswith('file'):
-                    nfmod.saveTestdata(pname, nfmod.infileurls[indx]) # only do this if the tool seems to install
+                if ptype.startswith('file') :
+                    res = nfmod.saveTestdata(pname, nfmod.infileurls[indx]) # only do this if the tool seems to install
+
 
             if tf.condaenv and len(tf.condaenv) > 0:
                 iret = tf.install_deps()
