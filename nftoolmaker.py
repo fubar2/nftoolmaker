@@ -125,7 +125,7 @@ class ParseNFMod:
         self.getTestInfo()
         if self.inparamcount != len(self.testParamList):
             print("### inparamcount = ", self.inparamcount, 'but there are', len(self.testParamList), 'test parameters in', self.testParamList)
-            nfmod.failtool('paramcount')
+            self.failtool('paramcount')
         self.makeMeta()
         stub = self.getsection("stub:")  # not all have these - no idea what they're for
         for indx, inpdict in enumerate(self.inputpar):
