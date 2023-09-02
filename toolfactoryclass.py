@@ -55,15 +55,6 @@ class Tool_Factory:
         """
 
         self.args = args
-        # sed will update these settings during tfsetup.py first run
-        self.GALAXY_ADMIN_KEY = "956432473193251840"
-        self.GALAXY_URL = "http://localhost:8080"
-        self.myversion = "V3.0 February 2023"
-        self.verbose = True
-        self.debug = True
-        self.toolFactoryURL = "https://github.com/fubar2/galaxy_tf_overlay"
-        self.logger = logging.getLogger(__name__)
-
         assert args.parampass in [
             "0",
             "embed",
@@ -74,6 +65,15 @@ class Tool_Factory:
             "args.parampass %s not 0,positional, embed, embednfmod or argparse"
             % args.parampass
         )
+        # sed will update these settings during tfsetup.py first run
+        self.GALAXY_ADMIN_KEY = "956432473193251840"
+        self.GALAXY_URL = "http://localhost:8080"
+        self.myversion = "V3.0 February 2023"
+        self.verbose = True
+        self.debug = True
+        self.toolFactoryURL = "https://github.com/fubar2/galaxy_tf_overlay"
+        self.logger = logging.getLogger(__name__)
+        self.tool_version = self.args.tool_version
         self.nfcoremod = False
         if args.parampass == "embednfmod":
             self.nfcoremod = True
@@ -175,13 +175,7 @@ class Tool_Factory:
             else:
                 self.executeme = None
         aXCL = self.xmlcl.append
-        self.newtool = gxt.Tool(
-            self.tool_name,
-            self.tool_id,
-            self.args.tool_version,
-            self.args.tool_desc,
-            "",
-        )
+
         self.repdir = os.path.join(args.tfcollection, "TFouts", self.tool_name)
         self.toold = os.path.join(self.local_tools, self.tool_name)
         self.tooltestd = os.path.join(self.toold, "test-data")
@@ -218,7 +212,7 @@ class Tool_Factory:
             for ex in self.executeme:
                 if ex:
                     aXCL(ex)
-            aXCL("$runme")
+            aXCL("'$runme'")
         else:
             for ex in self.executeme:
                 aXCL(ex)
@@ -269,7 +263,7 @@ class Tool_Factory:
             aX('#set task_process = "%s"' % self.tool_name)
         for p in self.collections:
             aX("mkdir -p %s &&" %  p["name"])
-        aX("%s $runme" % self.args.sysexe)
+        aX("%s '$runme'" % self.args.sysexe)
 
     def prepargp(self):
         xclsuffix = []
@@ -802,6 +796,44 @@ class Tool_Factory:
         Uses galaxyhtml
         Hmmm. How to get the command line into correct order...
         """
+        requirements = gxtp.Requirements()
+        self.condaenv = []
+        if self.args.packages:
+            try:
+                for d in self.args.packages.split(","):
+                    ver = None
+                    packg = None
+                    d = d.replace("==", ":")
+                    d = d.replace("=", ":")
+                    if ":" in d:
+                        packg, ver = d.split(":")[:2]
+                        ver = ver.strip()
+                        packg = packg.strip()
+                        self.tool_version = ver
+                    else:
+                        packg = d.strip()
+                        ver = None
+                    if ver == "":
+                        ver = None
+                    if packg:
+                        requirements.append(
+                            gxtp.Requirement("package", packg.strip(), ver)
+                        )
+                        self.condaenv.append(d)
+            except Exception:
+                self.logger.error("### malformed packages string supplied - cannot parse = %s" % self.args.packages)
+                sys.exit(2)
+        elif self.args.container:
+            requirements.append(
+                            gxtp.Requirement("container", self.args.container))
+        self.newtool = gxt.Tool(
+            self.tool_name,
+            self.tool_id,
+            self.tool_version,
+            self.args.tool_desc,
+            "",
+        )
+        self.newtool.requirements = requirements
         iXCL = self.xmlcl.insert
         aXCL = self.xmlcl.append
         if self.args.cl_prefix:  # DIY CL start
@@ -857,41 +889,12 @@ class Tool_Factory:
                 logging.error(
                     "WARNING: Galaxyxml version does not have the PR merged yet - tests for collections must be over-ridden until then!"
                 )
-        self.newtool.version_command = f'echo "{self.args.tool_version}"'
+        self.newtool.version_command = f'echo "{self.tool_version}"'
         std = gxtp.Stdios()
-        std1 = gxtp.Stdio()
-        std.append(std1)
+        std.append(gxtp.Stdio(range=":-1", level="fatal", description="Error occurred. Please check Tool Standard Error"))
+        std.append(gxtp.Stdio(range="137", level="fatal_oom", description="Out of Memory"))
+        std.append(gxtp.Stdio(range="1:", level="fatal", description="Error occurred. Please check Tool Standard Error"))
         self.newtool.stdios = std
-        requirements = gxtp.Requirements()
-        self.condaenv = []
-        if self.args.packages:
-            try:
-                for d in self.args.packages.split(","):
-                    ver = None
-                    packg = None
-                    d = d.replace("==", ":")
-                    d = d.replace("=", ":")
-                    if ":" in d:
-                        packg, ver = d.split(":")[:2]
-                        ver = ver.strip()
-                        packg = packg.strip()
-                    else:
-                        packg = d.strip()
-                        ver = None
-                    if ver == "":
-                        ver = None
-                    if packg:
-                        requirements.append(
-                            gxtp.Requirement("package", packg.strip(), ver)
-                        )
-                        self.condaenv.append(d)
-            except Exception:
-                self.logger.error("### malformed packages string supplied - cannot parse = %s" % self.args.packages)
-                sys.exit(2)
-        elif self.args.container:
-            requirements.append(
-                            gxtp.Requirement("container", self.args.container)                        )
-        self.newtool.requirements = requirements
         if self.args.parampass == "0":
             self.doNoXMLparam()
         else:
@@ -933,9 +936,9 @@ class Tool_Factory:
         yamlf = open(yfname, "w")
         odict = {
             "name": self.tool_name,
-            "owner": yuser,
+            "owner": "fubar2",
             "type": "unrestricted",
-            "description": self.args.tool_desc,
+            "description": "Auto-generated from the corresponding nf-core module using https://github.com/fubar2/nftoolmaker",
             "synopsis": self.args.tool_desc,
             "category": "ToolFactory generated Tools",
         }

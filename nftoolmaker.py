@@ -196,11 +196,13 @@ class ParseNFMod:
                 "not found",
             )
 
-    def failtool(self):
+    def failtool(self, failtype):
         """
         move to failed
         """
-        faildir = os.path.join(self.local_tools,"failed", self.tool_name)
+        faildir = os.path.join(self.local_tools, failtype, self.tool_name)
+        if not os.path.exists(faildir):
+            os.makedirs(faildir, exist_ok=True)
         cl = ["mv", self.toold, faildir]
         p = subprocess.run(cl)
         print("$$$$$ moved failed tool", self.tool_name, "to", faildir)
@@ -260,7 +262,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
 
         """
         swaps = {'faa':'fasta', 'hmmer':'hmm3', 'hmm':'hmm3', 'sthlm.gz':"stockholm", 'sthlm': "stockholm", "fa": "fasta",
-            "hmm.gz": "hmm3", "hm.gz": "hmm3", "abacas*":"txt"}
+            "hmm.gz": "hmm3", "hm.gz": "hmm3", "abacas*":"txt", "tsv": "tabular"}
         fastaspawn = ['fna.gz','faa.gz','fasta.gz','fa.gz', 'faa', 'fa', ]
         fixedfmt = []
         for f in pfmt.split(','):
@@ -710,10 +712,13 @@ if __name__ == "__main__":
         res = tf.update_toolconf()
         if res:
             logger.error("###### update toolconf failed - is the galaxy server needed for tests available?")
-            nfmod.failtool()
+            nfmod.failtool("failinstall")
         else:
             if tf.condaenv and len(tf.condaenv) > 0:
-                tf.install_deps()
+                iret = tf.install_deps()
+                if iret:
+                    logger.error("Toolfactory unable to installed deps - failed to build")
+                    nfmod.failtool('failinstall')
                 logger.debug("Toolfactory installed deps. Calling fast test")
                 time.sleep(2)
             for indx, d in enumerate(nfmod.inputpar): # need these for tests
@@ -742,7 +747,7 @@ if __name__ == "__main__":
                     "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
                 )
                 logging.shutdown()
-                nfmod.failtool()
+                nfmod.failtool("failtest")
                 #tf.makeToolTar(1)
             else:
                 pass
