@@ -39,7 +39,7 @@ import galaxyxml.tool.parameters as gxtp
 import lxml.etree as ET
 
 from nfParser import  cleanUpTests
-from toolfactoryclass import Tool_Factory
+from toolfactory import Tool_Factory
 
 logger = logging.getLogger(__name__)
 """
@@ -71,13 +71,24 @@ class ParseNFMod:
         self.tfcl = ["--parampass", "embednfmod"]
         if args.nftest: # default is not
             self.tfcl.append("--nftest")
-        self.local_tools = os.path.join(args.collpath, "tools")
-        self.toold = os.path.join(self.local_tools, self.tool_name)
+        self.local_tools = os.path.join(args.galaxy_root, "local_tools")
         if args.nftest:
-            self.local_tools = os.path.join(args.galaxy_root, "local_tools")
-            self.toold = os.path.join(args.collpath, self.tool_name)
-        self.repdir = os.path.join(args.collpath,'TFouts', self.tool_name)
-        self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
+                self.local_tools = os.path.join(args.galaxy_root, "local_tools")
+                self.repdir = os.path.join(self.local_tools, "TF", self.tool_name)
+                self.toold = os.path.join(self.local_tools, self.tool_name)
+                self.tooltestd = os.path.join(self.toold, "test-data")
+                self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", "toolgen"]
+        else:
+                self.local_tools = os.path.join(args.collpath, "tools")
+                self.repdir = os.path.join(args.collpath, "TFouts", self.tool_name)
+                self.toold = os.path.join(self.local_tools, self.tool_name)
+                self.tooltestd = os.path.join(self.toold, "test-data")
+                self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
+        os.makedirs(self.repdir, exist_ok=True)
+        os.makedirs(self.toold, exist_ok=True)
+        os.makedirs(self.tooltestd, exist_ok=True)
+        os.makedirs(self.local_tools, exist_ok=True)
+        self.local_tool_conf = os.path.join(self.local_tools, "local_tool_conf.xml")
         self.tooltestd = os.path.join(self.toold, 'test-data') # for test input files to go
         pathlib.Path(self.toold).mkdir(parents=True, exist_ok=True)
         pathlib.Path(self.tooltestd).mkdir(parents=True, exist_ok=True)
@@ -285,12 +296,12 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         may need to be ungzipped and in test folder
         """
         localpath = os.path.join(self.tooltestd, "%s_sample" % pname)
-        print("save", testDataURL, 'for', pname, 'to', localpath)
+        print("#### save", testDataURL, 'for', pname, 'to', localpath)
         if not os.path.exists(localpath):
             cl = ["wget", "--timeout", "5", "--tries", "2", "-O", localpath, testDataURL]
             if testDataURL.endswith('.gz'): # major kludge as usual...
                 gzlocalpath = "%s.gz" % localpath
-                cl = ["wget", "-q", "-O", gzlocalpath, testDataURL, "&&", "rm", "-f", localpath, "&&", "gunzip", gzlocalpath]
+                cl = ["wget", "-q", "--timeout", "5", "--tries", "2", "-O", gzlocalpath, testDataURL, "&&", "rm", "-f", localpath, "&&", "gunzip", gzlocalpath]
             p = subprocess.run(' '.join(cl), shell = True)
             if p.returncode:
                 print("Got", p.returncode, "from executing", " ".join(cl))
@@ -689,7 +700,6 @@ if __name__ == "__main__":
     print('@@@@@@nftoolmaker building', nfmod.tool_name)
     collpath = nfargs.collpath
     cl = nfmod.tfcl
-    print("cl=", "\n".join(cl))
     with open(os.path.join(nfmod.repdir, 'ToolFactoryCL_%s.txt' % nfmod.tool_name), 'w') as fout:
         fout.write("\n".join(cl))
     args = prepargs(cl)
@@ -704,52 +714,53 @@ if __name__ == "__main__":
     fformatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     fh.setFormatter(fformatter)
     logger.addHandler(fh)
+    print("cl=", "\n".join(cl))
     tf = Tool_Factory(args)
     tf.makeTool()
     tf.writeTFyml()
-    if args.nftest:
+    if nfargs.nftest:
         tf.writeShedyml()
         res = tf.update_toolconf()
         if res:
             logger.error("###### update toolconf failed - is the galaxy server needed for tests available?")
             nfmod.failtool("failinstall")
         else:
-            if tf.condaenv and len(tf.condaenv) > 0:
-                iret = tf.install_deps()
-                if iret:
-                    logger.error("Toolfactory unable to installed deps - failed to build")
-                    nfmod.failtool('failinstall')
-                logger.debug("Toolfactory installed deps. Calling fast test")
-                time.sleep(2)
+            logger.info('-----------------copying test files')
             for indx, d in enumerate(nfmod.inputpar): # need these for tests
                 pname = list(d.keys())[0]
                 ptype = d[pname]["type"]
                 if ptype.startswith('file'):
                     nfmod.saveTestdata(pname, nfmod.infileurls[indx]) # only do this if the tool seems to install
-            testret = tf.planemo_local_test()
-            logger.debug("Toolfactory finished test")
-            if int(testret) > 0:
-                logger.error("ToolFactory tool build and test failed. :(")
-                logger.info(
-                    "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
-                )
-                logger.info("when tested with galaxy_tool_test.  Error code:%d" % int(testret), ".")
-                logger.info(
-                    "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
-                )
-                logger.info(
-                    "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
-                )
-                logger.info(
-                    "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
-                )
-                logger.info(
-                    "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
-                )
-                logging.shutdown()
-                nfmod.failtool("failtest")
-                #tf.makeToolTar(1)
-            else:
-                pass
-                tf.makeToolTar()
+
+            if tf.condaenv and len(tf.condaenv) > 0:
+                iret = tf.install_deps()
+                if iret:
+                    logger.error("Toolfactory unable to installed deps - failed to build")
+                    nfmod.failtool('failinstall')
+                else:
+                    testret = tf.planemo_local_test()
+                    logger.debug("Toolfactory finished test")
+                    if int(testret) > 0:
+                        logger.error("ToolFactory tool build and test failed. :(")
+                        logger.info(
+                            "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
+                        )
+                        logger.info("when tested with galaxy_tool_test.  Error code:%d." % int(testret))
+                        logger.info(
+                            "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
+                        )
+                        logger.info(
+                            "Expand (click on) any of the broken (red) history output titles to see that 'i' button and click it"
+                        )
+                        logger.info(
+                            "Make sure it is the same as your working test command line and double check that data files are coming from and going to where they should"
+                        )
+                        logger.info(
+                            "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
+                        )
+                        logging.shutdown()
+                        nfmod.failtool("failtest")
+                        #tf.makeToolTar(1)
+                    else:
+                        tf.makeToolTar()
     logging.shutdown()

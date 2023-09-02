@@ -8,7 +8,7 @@ import subprocess
 
 corepath = '../nfcore_modules/modules/nf-core'
 cl = ["python", "nftoolmaker.py",  "--galaxy_root", "/home/ross/rossgit/galaxytf", "--toolfactory_dir",
-  "/home/ross/rossgit/galaxytf/local_tools/toolfactory", "--nftest", "--collpath",  "/home/ross/rossgit/galaxytf/local_tools"]
+  "/home/ross/rossgit/galaxytf/local_tools/toolfactory", "--nftest"]
 
 def amod(mod, dlist):
 
@@ -17,7 +17,7 @@ def amod(mod, dlist):
     if len(y) > 0:
         yam = y[0]
         tex = [x for x in dlist if x.endswith('.nfcore') or x.endswith('.nf')][0]
-        acl = cl + ["--nftext", tex, "--nfyml", yam, ]
+        acl = cl + ["--nftext", tex, "--nfyml", yam, "--collpath",  "/home/ross/rossgit/galaxytf/local_tools/TF/%s" % os.path.split(mod)[1]]
         print('### amod calling nftoolmaker with', acl)
         p = subprocess.run(acl)
         print('### stdout ', p.stdout, 'stderr', p.stderr)
