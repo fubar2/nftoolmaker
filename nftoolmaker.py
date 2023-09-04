@@ -123,9 +123,14 @@ class ParseNFMod:
             self.inparamnames.append(pname)
         self.inparamcount = len(self.inparamnames) # needed to select a test using them all - bugger anything else - too hard to match up names
         self.getTestInfo()
-        if self.inparamcount != len(self.testParamList):
-            print("### inparamcount = ", self.inparamcount, 'but there are', len(self.testParamList), 'test parameters in', self.testParamList)
-            self.failtool('paramcount')
+
+        if self.testParamlist:
+            if self.inparamcount != len(self.testParamList):
+                print("### inparamcount = ", self.inparamcount, 'but there are', len(self.testParamList), 'test parameters in', self.testParamList)
+                self.failtool('paramcount')
+        else:
+              print("### no test parameters in", self.tool_name)
+              self.failtool('paramcount')
         self.makeMeta()
         stub = self.getsection("stub:")  # not all have these - no idea what they're for
         for indx, inpdict in enumerate(self.inputpar):
@@ -732,7 +737,7 @@ if __name__ == "__main__":
     print("cl=", "\n".join(cl))
     tf = Tool_Factory(args)
     tf.makeTool()
-    #tf.writeTFyml()
+    tf.writeTFyml()
     if nfargs.nftest:
         tf.writeShedyml()
         res = tf.update_toolconf()

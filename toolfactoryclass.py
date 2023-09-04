@@ -251,7 +251,10 @@ class Tool_Factory:
             aXCL("$%s" % self.outfiles[0]["name"])
 
     def prepembed(self):
-        """fix self.script"""
+        """fix self.script fo nfcore
+        these scripts don't need a command line because they use the cheetah templating before they are written for the interpreter.
+
+        """
         scrip = self.script
         if self.nfcoremod:
             self.script = (
@@ -363,7 +366,7 @@ class Tool_Factory:
         assert len(rxcheck) > 0, "Supplied script is empty. Cannot run"
         self.script = "\n".join(rxcheck)
         if self.executeme:
-            self.scriptname = '%s_%s' % (self.tool_name, self.executeme[0])
+            self.scriptname = '%s.%s' % (self.tool_name, self.executeme[0])
         else:
             self.scriptname = '%s.script' % (self.tool_name)
         self.scriptpath = os.path.join(self.toold, self.scriptname)
@@ -874,7 +877,7 @@ class Tool_Factory:
                 )
             scr.append("\n")
             safertext = safertext + "\n".join(scr)
-        self.newtool.help = safertext
+        self.newtool.help = ' '.join(helptext)
         for p in self.collections:
             newkind = p["kind"]
             newname = p["name"]

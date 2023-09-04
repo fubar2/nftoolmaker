@@ -938,12 +938,23 @@ class Tool_Factory:
 
     def writeTFyml(self):
         """for posterity"""
-        tooldict = copy.copy(self.args)
-        tooldict["script"] = self.script
-        tool["help"] = self.helptext
+        adict = {}
+        rargs = ['input_files', 'output_files', 'additional_parameters', 'selecttext_parameters', 'selectflag_parameters', 'xtra_files']
+        args = vars(self.args)
+        for k in args.keys():
+            if k not in rargs:
+                adict[k] = args.get(k, None)
+            else:
+                if adict.get(k, None):
+                    adict[k].append(adict[k])
+                else:
+                    adict[k] = [args.get(k, None)]
+        adict["script"] = self.script
+        adict["help"] = self.helptext
+        y = yaml.dump(adict)
         yfname = os.path.join(self.repdir, "%s_ToolFactory.yml" % self.tool_name)
         yamlf = open(yfname, "w")
-        yaml.dump(tool, yamlf, allow_unicode=True)
+        yaml.dump(y, yamlf, allow_unicode=True)
         yamlf.close()
 
 
