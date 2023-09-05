@@ -386,7 +386,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         fps = self.fixParamFormat(ppattern) # kludge so Galaxy doesn't get confused.
         #self.scriptPrefixSubs[pfmt] = "$%s" % pname # will be substituted in configfile
         pdict["CL"] = pid
-        pdict["name"] = pid
+        pdict["name"] = tdURL
         pdict["format"] = fps
         pdict["help"] = ""
         pdict["label"] = plabel
@@ -746,13 +746,6 @@ if __name__ == "__main__":
             nfmod.failtool("failinstall")
         else:
             logger.info('-----------------copying test files')
-            for indx, d in enumerate(nfmod.inputpar): # need these for tests
-                pname = list(d.keys())[0]
-                ptype = d[pname]["type"]
-                if ptype.startswith('file') :
-                    res = nfmod.saveTestdata(pname, nfmod.infileurls[indx]) # only do this if the tool seems to install
-
-
             if tf.condaenv and len(tf.condaenv) > 0:
                 iret = tf.install_deps()
                 if iret:
@@ -779,8 +772,8 @@ if __name__ == "__main__":
                         logger.info(
                             "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
                         )
-                        logging.shutdown()
                         nfmod.failtool("failtest")
+                        logging.shutdown()
                         #tf.makeToolTar(1)
                     else:
                         tf.makeToolTar()

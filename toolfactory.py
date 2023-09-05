@@ -67,9 +67,10 @@ class Tool_Factory:
         # sed will update these settings during tfsetup.py first run
         self.GALAXY_ADMIN_KEY = "956432473193251840"
         self.GALAXY_URL = "http://localhost:8080"
-        self.GALAXY_URL = "http://localhost:8080"
         self.args = args
+        self.tool_version = self.args.tool_version
         self.myversion = "V3.0 February 2023"
+        self.profile = 'profile="22.05"'
         self.verbose = True
         self.debug = True
         self.toolFactoryURL = "https://github.com/fubar2/galaxy_tf_overlay"
@@ -282,16 +283,7 @@ class Tool_Factory:
                     '< $%s' % nam,
                 ]
             else:
-                over = ""
-                if req:
-                    if rep:
-                        over = f'#for $rep in $R_{nam}:\n--{nam} "$rep.{nam}"\n#end for'
-                else:
-                    if rep:
-                        over = f'#for $rep in $R_{nam}:\n--{nam} "$rep.{nam}"\n#end for'
-                    else:
-                        over = f"#if ${nam}\n --{nam} ${nam} \n#end if"
-                xappendme = [p["CL"], '$%s' % p["CL"], over]
+                xappendme = [p["CL"], '$%s' % p["CL"], ""]
             xclsuffix.append(xappendme)
         for i, p in enumerate(self.outfiles):
             if p["origCL"].strip().upper() == "STDOUT":
@@ -354,27 +346,23 @@ class Tool_Factory:
         self.xclsuffix = xclsuffix
 
     def prepScript(self):
-        rx = open(self.args.script_path, "r").readlines()
-        rx = [x.rstrip() for x in rx]
-        rxcheck = [x.strip() for x in rx if x.strip() > ""]
+        s = open(self.args.script_path, "r").read()
+        ss = s.split('\n')
+        rxcheck = [x for x in ss if x.strip() > ""]
         assert len(rxcheck) > 0, "Supplied script is empty. Cannot run"
-        self.script = "\n".join(rxcheck)
+        self.script = s
         if len(self.executeme) > 0:
-            self.sfile = os.path.join(self.repdir, "%s.%s" % (self.tool_name, self.executeme[0]))
+            self.sfile = os.path.join(self.repdir, "%s.%s.txt" % (self.tool_name, self.executeme[0]))
         else:
-            self.sfile = os.path.join(self.repdir, "%s.script" % (self.tool_name, self.executeme[0]))
+            self.sfile = os.path.join(self.repdir, "%s.script.txt" % (self.tool_name, self.executeme[0]))
         tscript = open(self.sfile, "w")
         tscript.write(self.script)
         tscript.write('\n')
         tscript.close()
-        self.spacedScript = [f"    {x.replace('${','$ {')}" for x in rx if x.strip() > ""]
+        self.spacedScript = [f"    {x.replace('${','$ {')}" for x in ss if x.strip() > ""]
         rxcheck.insert(0, '#raw')
         rxcheck.append('#end raw')
         self.escapedScript = rxcheck
-        # art = '%s.%s' % (self.tool_name, self.executeme[0])
-        # artifact = open(art, "wb")
-        # artifact.write(bytes(self.script, "utf8"))
-        # artifact.close()
 
     def cleanuppar(self):
         """positional parameters are complicated by their numeric ordinal"""
@@ -556,7 +544,7 @@ class Tool_Factory:
                 label=alab,
                 help=p["help"],
                 format=newfmt,
-                multiple=False,
+                multiple=reps,
                 num_dashes=ndash,
             )
             aninput.positional = self.is_positional
@@ -567,18 +555,9 @@ class Tool_Factory:
                 else:
                     aninput.positional = int(p["origCL"])
                     aninput.command_line_override = "$%s" % newname
-            if reps:
-                repe = gxtp.Repeat(name=f"R_{newname}", title=f"Any number of {alab} repeats are allowed")
-                repe.append(aninput)
-                self.tinputs.append(repe)
-                tparm = gxtp.TestRepeat(name=f"R_{newname}")
-                tparm2 = gxtp.TestParam(newname, value="%s_sample" % newname)
-                tparm.append(tparm2)
-                self.testparam.append(tparm)
-            else:
-                self.tinputs.append(aninput)
-                tparm = gxtp.TestParam(newname, value="%s_sample" % newname)
-                self.testparam.append(tparm)
+            self.tinputs.append(aninput)
+            tparm = gxtp.TestParam(newname, value="%s_sample" % newname)
+            self.testparam.append(tparm)
         for p in self.addpar:
             newname = p["name"]
             newval = p.get("value","")
@@ -800,7 +779,6 @@ class Tool_Factory:
                     else:
                         packg = d.strip()
                         ver = None
-                        self.tool_version = self.args.tool_version
                     if ver == "":
                         ver = None
                     if packg:
@@ -832,7 +810,12 @@ class Tool_Factory:
             self.newtool.command_override = self.cl_override  # config file
         else:
             self.newtool.command_override = self.xmlcl
+        self.cites = self.parse_citations() # citation_tuples.append(("doi", citation[len("doi") :].strip()))
         cite = gxtp.Citations()
+        if len(self.cites) > 0:
+            for c in self.cites:
+                acite = gxtp.Citation(type=c[0], value=c[1])
+                cite.append(acite)
         acite = gxtp.Citation(type="doi", value="10.1093/bioinformatics/bts573")
         cite.append(acite)
         self.newtool.citations = cite
@@ -858,7 +841,7 @@ class Tool_Factory:
                 )
             scr.append("\n")
             safertext = safertext + "\n".join(scr)
-        self.newtool.help = safertext
+        self.newtool.help = ' '.join(self.helptext)
         for p in self.collections:
             newkind = p["kind"]
             newname = p["name"]
@@ -908,6 +891,7 @@ class Tool_Factory:
         )
         self.newtool.add_comment("Source in git at: %s" % (self.toolFactoryURL))
         exml = self.newtool.export()
+        exml = exml.replace("<tool name", "<tool %s name" % self.profile)
         if (
             self.test_override
         ):  # cannot do this inside galaxyxml as it expects lxml objects for tests
@@ -916,6 +900,9 @@ class Tool_Factory:
             fixed = "%s\n%s\n%s" % (part1, "\n".join(self.test_override), part2)
             exml = fixed
         with open(os.path.join(self.toold,"%s.xml" % self.tool_name), "w") as xf:
+            xf.write(exml)
+            xf.write("\n")
+        with open(os.path.join(self.repdir,"%s_xml.xml" % self.tool_name), "w") as xf:
             xf.write(exml)
             xf.write("\n")
 
@@ -951,11 +938,10 @@ class Tool_Factory:
                     adict[k] = [args.get(k, None)]
         adict["script"] = self.script
         adict["help"] = self.helptext
-        y = yaml.dump(adict)
         yfname = os.path.join(self.repdir, "%s_ToolFactory.yml" % self.tool_name)
-        yamlf = open(yfname, "w")
-        yaml.dump(y, yamlf, allow_unicode=True)
-        yamlf.close()
+        yf = open(yfname,'w')
+        yaml.dump(adict, yf)
+        yf.close()
 
 
     def makeTool(self):
@@ -969,23 +955,24 @@ class Tool_Factory:
             if not os.path.exists(stname):
                 shutil.copyfile(self.sfile, stname)
                 logger.info("Copied %s to %s" % (self.sfile, stname))
-        # xreal = "%s.xml" % self.tool_name
-        # xout = os.path.join(self.toold, xreal)
-        # shutil.copyfile(xreal, xout)
-        # logger.info("Copied %s to %s" % (xreal, xout))
-        # xrename = "%s_toolxml.xml" % self.tool_name
-        # xout = os.path.join(self.repdir, xrename)
-        # shutil.copyfile(xreal, xout)
-        # logger.info("Copied %s to %s" % (xreal, xout))
         for p in self.infiles:
-            pth = p["name"]
-            if os.path.exists(pth):
-                dest = os.path.join(self.tooltestd, "%s_sample" % p["infilename"])
-                shutil.copyfile(pth, dest)
-                logger.info("Copied %s to %s" % (pth, dest))
-                dest = os.path.join(self.repdir, "%s_sample.%s" % (p["infilename"], p["format"]))
-                shutil.copyfile(pth, dest)
-                logger.info("Copied %s to %s" % (pth, dest))
+            paths = p["name"]
+            pathss = paths.split(',')
+            np = len(pathss)
+            for i, pth in enumerate(pathss):
+                if os.path.exists(pth):
+                    if np > 1:
+                        dest = os.path.join(self.tooltestd, "%s_%d_sample" % (p["infilename"], i+1))
+                    else:
+                        dest = os.path.join(self.tooltestd, "%s_sample" % p["infilename"])
+                    shutil.copyfile(pth, dest)
+                    logger.info("Copied %s to %s" % (pth, dest))
+                    if np > 1:
+                        dest = os.path.join(self.repdir, "%s_%d_sample.%s" % (p["infilename"], i+1, p["format"]))
+                    else:
+                        dest = os.path.join(self.repdir, "%s_sample.%s" % (p["infilename"], p["format"]))
+                    shutil.copyfile(pth, dest)
+                    logger.info("Copied %s to %s" % (pth, dest))
             else:
                 logger.info("Optional input path %s does not exist - not copied" % pth)
         if self.extra_files and len(self.extra_files) > 0:
@@ -1015,7 +1002,6 @@ class Tool_Factory:
                 os.unlink(os.path.join(self.toold,f))
         if self.newtarpath:
             tf = tarfile.open(self.newtarpath, "w:gz")
-            print('ls toold = ', os.listdir(self.toold))
             tf.add(
                 name=self.toold,
                 arcname=self.tool_name,
@@ -1057,18 +1043,13 @@ class Tool_Factory:
         try:
             p = subprocess.run(
                 " ".join(cl),
-                timeout = 60,
+                timeout = 90,
                 shell=True,
                 cwd=self.toold,
                 capture_output=True,
                 check=True,
                 text=True,
             )
-            for errline in p.stderr.splitlines():
-                self.logger.info(errline)
-            dest = self.repdir
-            src = self.tooltestd
-            shutil.copytree(src, dest, dirs_exist_ok=True)
             return p.returncode
         except:
             return 1
@@ -1094,7 +1075,7 @@ class Tool_Factory:
             text=True
         )
         for errline in p.stderr.splitlines():
-            logger.info(errline)
+            print("planemo:", errline)
         dest = self.repdir
         src = self.test_outs
         shutil.copytree(src, dest, dirs_exist_ok=True)
@@ -1185,16 +1166,20 @@ class Tool_Factory:
         cheetah_escape_table = {"$": "\\$", "#": "\\#"}
         return "".join([cheetah_escape_table.get(c, c) for c in text])
 
-    def parse_citations(self, citations_text):
+    def parse_citations(self):
         """"""
-        citations = [c for c in citations_text.split("**ENTRY**") if c.strip()]
-        citation_tuples = []
-        for citation in citations:
-            if citation.startswith("doi"):
-                citation_tuples.append(("doi", citation[len("doi") :].strip()))
-            else:
-                citation_tuples.append(("bibtex", citation[len("bibtex") :].strip()))
-        return citation_tuples
+        if self.args.citations:
+            ct = open(self.args.citations, 'r').read()
+            citations = [c.strip() for c in ct.split("**ENTRY**") if c.strip()]
+            citation_tuples = []
+            for citation in citations:
+                if citation.startswith("doi"):
+                    citation_tuples.append(("doi", citation[len("doi") :].strip()))
+                else:
+                    citation_tuples.append(("bibtex", citation[len("bibtex") :].strip()))
+            return citation_tuples
+        else:
+            return None
 
 
 def main():
@@ -1228,15 +1213,20 @@ def main():
     a("--selectflag_parameters", action="append", default=[])
     a("--edit_additional_parameters", action="store_true", default=False)
     a("--parampass", default="positional")
-    a("--tfout", default="./tfout")
+    a("--tfcollection", default="toolgen")
     a("--galaxy_root", default="/galaxy-central")
     a("--collection", action="append", default=[])
     a("--include_tests", default=False, action="store_true")
     a("--install_flag", action="store_true", default=False)
     a("--admin_only", default=True, action="store_true")
     a("--tested_tool_out", default=None)
+    a("--container", default=None,required=False)
     a("--tool_conf_path", default="config/tool_conf.xml")  # relative to $__root_dir__
-    a("--xtra_files", default=[], action="append",) # history data items to add to the tool base directory
+    a(
+        "--xtra_files",
+        default=[],
+        action="append",
+    )  # history data items to add to the tool base directory
     args = parser.parse_args()
     if args.admin_only:
         assert not args.bad_user, (
@@ -1244,9 +1234,7 @@ def main():
             % (args.bad_user, args.bad_user)
         )
     assert args.tool_name, "## This ToolFactory cannot build a tool without a tool name. Please supply one."
-    logfilename = os.path.join(REP_DIR, 'ToolFactory_make_%s_log.txt' % args.tool_name)
-    if not os.path.exists(REP_DIR):
-        os.mkdir(REP_DIR)
+    logfilename = 'ToolFactory_make_%s_log.txt' % args.tool_name
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(logfilename, mode='w')
     fformatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -1255,7 +1243,7 @@ def main():
     tf = Tool_Factory(args)
     tf.makeTool()
     tf.writeShedyml()
-    tf.writeTFyml()
+    #tf.writeTFyml()tf.writeTFyml()
     tf.update_toolconf()
     time.sleep(5)
     if tf.condaenv and len(tf.condaenv) > 0 :
@@ -1270,7 +1258,7 @@ def main():
                 logger.info(
                     "This is usually because the supplied script or dependency did not run correctly with the test inputs and parameter settings"
                 )
-                logger.info("when tested with galaxy_tool_test.  Error code:%d" % testret, ".")
+                logger.info("when tested with galaxy_tool_test.  Error code:%d" % int(testret))
                 logger.info(
                     "The 'i' (information) option shows how the ToolFactory was called, stderr and stdout, and what the command line was."
                 )
