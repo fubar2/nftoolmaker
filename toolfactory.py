@@ -812,7 +812,7 @@ class Tool_Factory:
             self.newtool.command_override = self.xmlcl
         self.cites = self.parse_citations() # citation_tuples.append(("doi", citation[len("doi") :].strip()))
         cite = gxtp.Citations()
-        if len(self.cites) > 0:
+        if self.cites and len(self.cites) > 0:
             for c in self.cites:
                 acite = gxtp.Citation(type=c[0], value=c[1])
                 cite.append(acite)
@@ -973,8 +973,8 @@ class Tool_Factory:
                         dest = os.path.join(self.repdir, "%s_sample.%s" % (p["infilename"], p["format"]))
                     shutil.copyfile(pth, dest)
                     logger.info("Copied %s to %s" % (pth, dest))
-            else:
-                logger.info("Optional input path %s does not exist - not copied" % pth)
+                else:
+                    logger.info("Optional input path %s does not exist - not copied" % pth)
         if self.extra_files and len(self.extra_files) > 0:
             for xtra in self.extra_files:
                 fpath = xtra["fpath"]

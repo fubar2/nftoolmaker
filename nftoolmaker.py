@@ -124,7 +124,7 @@ class ParseNFMod:
         self.inparamcount = len(self.inparamnames) # needed to select a test using them all - bugger anything else - too hard to match up names
         self.getTestInfo()
 
-        if self.testParamlist:
+        if self.testParamList:
             if self.inparamcount != len(self.testParamList):
                 print("### inparamcount = ", self.inparamcount, 'but there are', len(self.testParamList), 'test parameters in', self.testParamList)
                 self.failtool('paramcount')
@@ -216,7 +216,7 @@ class ParseNFMod:
         """
         move to failed
         """
-        faildir = os.path.join(self.local_tools, failtype, self.tool_name)
+        faildir = os.path.join(self.local_tools, failtype)
         if not os.path.exists(faildir):
             os.makedirs(faildir, exist_ok=True)
         cl = ["mv", self.toold, faildir]
