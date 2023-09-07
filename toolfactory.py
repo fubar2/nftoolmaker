@@ -65,12 +65,12 @@ class Tool_Factory:
             % args.parampass
         )
         # sed will update these settings during tfsetup.py first run
-        self.GALAXY_ADMIN_KEY = "956432473193251840"
+        self.GALAXY_ADMIN_KEY = "1402975831620450304"
         self.GALAXY_URL = "http://localhost:8080"
         self.args = args
         self.tool_version = self.args.tool_version
         self.myversion = "V3.0 February 2023"
-        self.profile = 'profile="22.05"'
+        self.profile = "22.05"
         self.verbose = True
         self.debug = True
         self.toolFactoryURL = "https://github.com/fubar2/galaxy_tf_overlay"
@@ -797,8 +797,10 @@ class Tool_Factory:
             self.tool_id,
             self.tool_version,
             self.args.tool_desc,
-            "",
+            self.args.sysexe,
+            profile = self.profile
         )
+        self.newtool.command = gxtp.Command(detect_errors="aggressive")
         self.newtool.requirements = requirements
         iXCL = self.xmlcl.insert
         aXCL = self.xmlcl.append
@@ -891,7 +893,6 @@ class Tool_Factory:
         )
         self.newtool.add_comment("Source in git at: %s" % (self.toolFactoryURL))
         exml = self.newtool.export()
-        exml = exml.replace("<tool name", "<tool %s name" % self.profile)
         if (
             self.test_override
         ):  # cannot do this inside galaxyxml as it expects lxml objects for tests
@@ -974,7 +975,7 @@ class Tool_Factory:
                     shutil.copyfile(pth, dest)
                     logger.info("Copied %s to %s" % (pth, dest))
                 else:
-                    logger.info("Optional input path %s does not exist - not copied" % pth)
+                    logger.info("Optional input file path %s does not exist - not copied" % pth)
         if self.extra_files and len(self.extra_files) > 0:
             for xtra in self.extra_files:
                 fpath = xtra["fpath"]

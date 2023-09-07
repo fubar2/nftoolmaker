@@ -56,5 +56,5 @@ if args.mod:
         print('Cannot find module', args.mod)
 else:
     for i,d in enumerate(modlist):
-        convertd(os.path.join(corepath, d, args))
+        convertd(os.path.join(corepath, d), args)
 

@@ -386,14 +386,14 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         fps = self.fixParamFormat(ppattern) # kludge so Galaxy doesn't get confused.
         #self.scriptPrefixSubs[pfmt] = "$%s" % pname # will be substituted in configfile
         pdict["CL"] = pid
-        pdict["name"] = tdURL
+        pdict["name"] = pid
         pdict["format"] = fps
         pdict["help"] = ""
         pdict["label"] = plabel
         pdict["required"] = "0"
         self.tfcl.append("--input_files")
         self.tfcl.append(json.dumps(pdict))
-        #self.saveTestdata(pid, tdURL)
+        self.saveTestdata(pid, tdURL)
 
     def makeOutfile(self, inpdict):
         """
@@ -737,7 +737,7 @@ if __name__ == "__main__":
     print("cl=", "\n".join(cl))
     tf = Tool_Factory(args)
     tf.makeTool()
-    tf.writeTFyml()
+    #tf.writeTFyml()
     if nfargs.nftest:
         tf.writeShedyml()
         res = tf.update_toolconf()
@@ -773,7 +773,6 @@ if __name__ == "__main__":
                             "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
                         )
                         nfmod.failtool("failtest")
-                        logging.shutdown()
                         #tf.makeToolTar(1)
                     else:
                         tf.makeToolTar()
