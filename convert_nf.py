@@ -17,7 +17,7 @@ def amod(mod, dlist,args):
         yam = y[0]
         tex = [x for x in dlist if x.endswith('.nfcore') or x.endswith('.nf')][0]
         acl =  ["python", "nftoolmaker.py",  "--galaxy_root", args.galaxy_root, "--toolfactory_dir",
-  "%s/local_tools/toolfactory" % args.galaxy_root, "--nftest", "--nftext", tex, "--nfyml", yam, "--collpath",  "%s/local_tools/TF/%s" % (args.galaxy_root, os.path.split(mod)[1])]
+  "%s/local_tools/toolfactory" % args.galaxy_root, "--nftest", "--nftext", tex, "--nfyml", yam, "--collpath",  "%s/local_tools/%s" % (args.galaxy_root, os.path.split(mod)[1])]
         print('### amod ', mod, 'calling nftoolmaker with', acl)
         p = subprocess.run(acl)
         print('### stdout ', p.stdout, 'stderr', p.stderr)

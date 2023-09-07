@@ -960,7 +960,8 @@ class Tool_Factory:
             paths = p["name"]
             pathss = paths.split(',')
             np = len(pathss)
-            for i, pth in enumerate(pathss):
+            for i, pat in enumerate(pathss):
+                pth = os.path.join(self.tooltestd, pat)
                 if os.path.exists(pth):
                     if np > 1:
                         dest = os.path.join(self.tooltestd, "%s_%d_sample" % (p["infilename"], i+1))
@@ -975,7 +976,7 @@ class Tool_Factory:
                     shutil.copyfile(pth, dest)
                     logger.info("Copied %s to %s" % (pth, dest))
                 else:
-                    logger.info("Optional input file path %s does not exist - not copied" % pth)
+                    logger.info("Optional input file path %s exists - not copied" % pth)
         if self.extra_files and len(self.extra_files) > 0:
             for xtra in self.extra_files:
                 fpath = xtra["fpath"]
@@ -1120,7 +1121,7 @@ class Tool_Factory:
         gi = galaxy.GalaxyInstance(url=self.GALAXY_URL, key=self.GALAXY_ADMIN_KEY)
         toolready = False
         now = time.time()
-        nloop = 5
+        nloop = 4
         while nloop >= 0 and not toolready:
             try:
                 res = gi.tools.show_tool(tool_id=self.tool_name)
@@ -1128,8 +1129,8 @@ class Tool_Factory:
                 logger.info("Tool %s ready after %f seconds - %s\n" % (self.tool_name, time.time() - now, res))
             except ConnectionError:
                 nloop -= 1
-                time.sleep(2)
-                logger.info("Connection error - waiting 2 seconds.\n")
+                time.sleep(3)
+                logger.info("Connection error - waiting 3 seconds.\n")
         if nloop < 1:
             logger.error(
                 "Tool %s still not ready after %f seconds - please check the form and the generated xml for errors? \n"
@@ -1150,7 +1151,7 @@ class Tool_Factory:
         ]
         self.logger.info("Running %s\n" % " ".join(cll))
         try:
-            p = subprocess.run(cll, shell=False, capture_output=True, check=True, text=True)
+            p = subprocess.run(cll, shell=False, capture_output=True, timeout=90, check=True, text=True)
             for errline in p.stderr.splitlines():
                 self.logger.info(errline)
             return p.returncode
