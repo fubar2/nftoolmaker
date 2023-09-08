@@ -67,10 +67,11 @@ class Tool_Factory:
         # sed will update these settings during tfsetup.py first run
         self.GALAXY_ADMIN_KEY = "1402975831620450304"
         self.GALAXY_URL = "http://localhost:8080"
+        self.profile = 'profile="22.05"'
         self.args = args
         self.tool_version = self.args.tool_version
         self.myversion = "V3.0 February 2023"
-        self.profile = "22.05"
+        self.profile = 'profile="22.05"'
         self.verbose = True
         self.debug = True
         self.toolFactoryURL = "https://github.com/fubar2/galaxy_tf_overlay"
@@ -797,10 +798,8 @@ class Tool_Factory:
             self.tool_id,
             self.tool_version,
             self.args.tool_desc,
-            self.args.sysexe,
-            profile = self.profile
+            "",
         )
-        self.newtool.command = gxtp.Command(detect_errors="aggressive")
         self.newtool.requirements = requirements
         iXCL = self.xmlcl.insert
         aXCL = self.xmlcl.append
@@ -893,6 +892,7 @@ class Tool_Factory:
         )
         self.newtool.add_comment("Source in git at: %s" % (self.toolFactoryURL))
         exml = self.newtool.export()
+        exml = exml.replace("<tool name", "<tool %s name" % self.profile)
         if (
             self.test_override
         ):  # cannot do this inside galaxyxml as it expects lxml objects for tests
@@ -945,6 +945,26 @@ class Tool_Factory:
         yf.close()
 
 
+    def saveTestdata(self,pname, testDataURL):
+        """
+        may need to be ungzipped and in test folder
+        """
+        res = 0
+        localpath = os.path.join(self.tooltestd, "%s_sample" % pname)
+        print("#### save", testDataURL, 'for', pname, 'to', localpath)
+        if not os.path.exists(localpath):
+            cl = ["wget", "--timeout", "5", "--tries", "2", "-O", localpath, testDataURL]
+            if testDataURL.endswith('.gz'): # major kludge as usual...
+                gzlocalpath = "%s.gz" % localpath
+                cl = ["wget", "-q", "--timeout", "5", "--tries", "2", "-O", gzlocalpath, testDataURL, "&&", "rm", "-f", localpath, "&&", "gunzip", gzlocalpath]
+            p = subprocess.run(' '.join(cl), shell = True)
+            if p.returncode:
+                print("Got", p.returncode, "from executing", " ".join(cl))
+        else:
+            print('Not re-downloading', localpath)
+        return res
+
+
     def makeTool(self):
         """write xmls and input samples into place"""
         if self.args.parampass == 0:
@@ -958,10 +978,12 @@ class Tool_Factory:
                 logger.info("Copied %s to %s" % (self.sfile, stname))
         for p in self.infiles:
             paths = p["name"]
+            pname = p["CL"]
             pathss = paths.split(',')
             np = len(pathss)
-            for i, pat in enumerate(pathss):
-                pth = os.path.join(self.tooltestd, pat)
+            if p.get("URL", None):
+                res = self.saveTestdata(pname, p["URL"])
+            for i, pth in enumerate(pathss):
                 if os.path.exists(pth):
                     if np > 1:
                         dest = os.path.join(self.tooltestd, "%s_%d_sample" % (p["infilename"], i+1))
@@ -976,7 +998,7 @@ class Tool_Factory:
                     shutil.copyfile(pth, dest)
                     logger.info("Copied %s to %s" % (pth, dest))
                 else:
-                    logger.info("Optional input file path %s exists - not copied" % pth)
+                    logger.info("Optional input path %s does not exist - not copied" % pth)
         if self.extra_files and len(self.extra_files) > 0:
             for xtra in self.extra_files:
                 fpath = xtra["fpath"]
@@ -1121,7 +1143,7 @@ class Tool_Factory:
         gi = galaxy.GalaxyInstance(url=self.GALAXY_URL, key=self.GALAXY_ADMIN_KEY)
         toolready = False
         now = time.time()
-        nloop = 4
+        nloop = 5
         while nloop >= 0 and not toolready:
             try:
                 res = gi.tools.show_tool(tool_id=self.tool_name)
@@ -1129,8 +1151,8 @@ class Tool_Factory:
                 logger.info("Tool %s ready after %f seconds - %s\n" % (self.tool_name, time.time() - now, res))
             except ConnectionError:
                 nloop -= 1
-                time.sleep(3)
-                logger.info("Connection error - waiting 3 seconds.\n")
+                time.sleep(2)
+                logger.info("Connection error - waiting 2 seconds.\n")
         if nloop < 1:
             logger.error(
                 "Tool %s still not ready after %f seconds - please check the form and the generated xml for errors? \n"
@@ -1151,7 +1173,7 @@ class Tool_Factory:
         ]
         self.logger.info("Running %s\n" % " ".join(cll))
         try:
-            p = subprocess.run(cll, shell=False, capture_output=True, timeout=90, check=True, text=True)
+            p = subprocess.run(cll, shell=False, capture_output=True, check=True, text=True)
             for errline in p.stderr.splitlines():
                 self.logger.info(errline)
             return p.returncode

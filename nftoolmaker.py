@@ -6,7 +6,7 @@
 # working kind of september 21 but not worth trying all modules
 # maybe just save the testdata URI and parameters plus the TF command line as artifacts
 # then make a TF tool to generate a tool based on that command line so it can be fixed.
-whitelist = """['abacas', 'admixture', 'affy', 'agat', 'agrvate', 'allelecounter', 'ampcombi', 'ampir', 'amps', 'angsd', 'arcashla', 'aria2', 'ariba', 'ashlar', 'ataqv', 'authentict', 'backsub', 'bacphlip', 'bamaligncleaner', 'bamcmp', 'bamtools', 'bbmap', 'bclconvert', 'bioawk', 'biobambam', 'biscuit', 'bismark', 'cadd', 'calder2', 'canu', 'cellpose',  'chopper', 'clippy', 'clonalframeml', 'cmseq', 'cnvpytor', 'cooler', 'crumble', 'csvtk', 'custom', 'damageprofiler', 'dastool', 'dedup', 'deeparg', 'deepbgc', 'deepcell', 'deeptools', 'dragmap', 'dragonflye', 'dshbio', 'duphold', 'ectyper', 'eido', 'eigenstratdatabasetools', 'eklipse', 'elprep', 'emmtyper', 'endorspy', 'epang', 'expansionhunter', 'expansionhunterdenovo', 'falco', 'famsa', 'faqcs', 'fastk', 'fcs', 'ffq', 'fgbio', 'flye', 'fq', 'fqtk', 'galah', 'gamma', 'gangstr', 'ganon', 'gappa', 'gawk', 'gecco', 'gem2', 'genmap', 'genmod', 'genotyphi', 'gfaffix', 'gget', 'glimpse', 'glimpse2', 'glnexus', 'gnu', 'goat', 'goleft', 'gridss', 'gstama', 'gunc', 'gunzip', 'hapibd', 'hicap', 'hlala', 'hmmcopy', 'hmtnote', 'hpsuissero', 'ichorcna', 'icountmini', 'igv', 'iphop', 'islandpath', 'ismapper', 'isoseq3', 'kaiju', 'kat', 'kmcp', 'leehom', 'lissero', 'macrel', 'mafft', 'manta', 'mapad', 'mapdamage2', 'maxquant', 'mcquant', 'mcroni', 'md5sum', 'methyldackel', 'midas', 'mindagap', 'miranda', 'mitohifi', 'mmseqs', 'mobsuite', 'motus', 'msisensor', 'msisensor2', 'msisensorpro', 'mtnucratio', 'muscle', 'nanolyse', 'nanomonsv', 'nextgenmap', 'nfc', 'ngmaster', 'ngmerge', 'ngsbits', 'nucmer', 'paftools', 'pairix', 'pairtools',  'paraclu', 'pasty', 'pbbam', 'pbccs', 'pbptyper', 'peddy', 'peka', 'phantompeakqualtools', 'phispy', 'pindel', 'pints', 'pirate', 'platypus', 'pmdtools', 'preseq', 'prodigal', 'pydamage', 'pyrodigal', 'racon', 'rasusa', 'rgi', 'rhocall', 'rsem', 'rtgtools', 'salmon', 'sam2lca', 'sambamba', 'samtools', 'scimap', 'scramble', 'segemehl', 'seqsero2', 'sequencetools', 'sequenzautils', 'seroba', 'sexdeterrmine', 'sgdemux', 'shasum', 'shigatyper', 'shigeifinder', 'shinyngs', 'simpleaf', 'sistr', 'smncopynumbercaller', 'smoothxg', 'smoove', 'snpdists', 'snpsift', 'snpsites', 'somalier', 'sortmerna', 'spaceranger', 'spatyper', 'sratools', 'ssuissero', 'stadeniolib', 'staphopiasccmec', 'stranger', 'subread', 'survivor', 'svaba', 'svdb', 'svtk', 'svtyper', 'tabix', 'tailfindr', 'taxpasta', 'tbprofiler', 'tiara', 'tiddit', 'trimgalore', 'trimmomatic', 'ultra', 'ultraplex', 'umicollapse', 'umitools', 'universc', 'untar', 'untarfiles', 'unzip', 'unzipfiles', 'upd', 'varlociraptor', 'vcf2db', 'vcflib', 'verifybamid', 'vrhyme', 'wgsim', 'whamg', 'wisecondorx'']
+whitelist = """['abacas', 'admixture', 'affy', 'agat', 'agrvate', 'allelecounter', 'ampcombi', 'ampir', 'amps', 'angsd', 'arcashla', 'aria2', 'ariba', 'ashlar', 'ataqv', 'authentict', 'backsub', 'bacphlip', 'bamaligncleaner', 'bamcmp', 'bamtools', 'bbmap', 'bclconvert', 'bioawk', 'biobambam', 'biscuit', 'bismark', 'cadd', 'calder2', 'canu', 'cellpose',  'chopper', 'clippy', 'clonalframeml', 'cmseq', 'cnvpytor', 'cooler', 'crumble', 'csvtk', 'custom', 'damageprofiler', 'dastool', 'dedup', 'deeparg', 'deepbgc', 'deepcell', 'deeptools', 'dragmap', 'dragonflye', 'dshbio', 'duphold', 'ectyper', 'eido', 'eigenstratdatabasetools', 'eklipse', 'elprep', 'emmtyper', 'endorspy', 'epang', 'expansionhunter', 'expansionhunterdenovo', 'falco', 'famsa', 'faqcs', 'fastk', 'fcs', 'ffq', 'fgbio', 'flye', 'fq', 'fqtk', 'galah', 'gamma', 'gangstr', 'ganon', 'gappa', 'gawk', 'gecco', 'gem2', 'genmap', 'genmod', 'genotyphi', 'gfaffix', 'gget', 'glimpse', 'glimpse2', 'glnexus', 'gnu', 'goat', 'goleft', 'gridss', 'gstama', 'gunc', 'gunzip', 'hapibd', 'hicap', 'hlala', 'hmmcopy', 'hmtnote', 'hpsuissero', 'ichorcna', 'icountmini', 'igv', 'iphop', 'islandpath', 'ismapper', 'isoseq3', 'kaiju', 'kat', 'kmcp', 'leehom', 'lissero', 'macrel', 'mafft', 'manta', 'mapad', 'mapdamage2', 'maxquant', 'mcquant', 'mcroni', 'md5sum', 'methyldackel', 'midas', 'mindagap', 'miranda', 'mitohifi', 'mmseqs', 'mobsuite', 'motus', 'msisensor', 'msisensor2', 'msisensorpro', 'mtnucratio', 'muscle', 'nanolyse', 'nanomonsv', 'nextgenmap', 'nfc', 'ngmaster', 'ngmerge', 'ngsbits', 'nucmer', 'paftools', 'pairix', 'pairtools',  'paraclu', 'pasty', 'pbbam', 'pbccs', 'pbptyper', 'peddy', 'peka', 'phantompeakqualtools', 'phispy', 'pindel', 'pints', 'pirate', 'platypus', 'pmdtools', 'preseq', 'prodigal', 'pydamage', 'pyrodigal', 'racon', 'rasusa', 'rgi', 'rhocall', 'rsem', 'rtgtools', 'salmon', 'sam2lca', 'sambamba', 'samtools', 'scimap', 'scramble', 'segemehl', 'seqsero2', 'sequencetools', 'sequenzautils', 'seroba', 'sexdeterrmine', 'sgdemux', 'shasum', 'shigatyper', 'shigeifinder', 'shinyngs', 'simpleaf', 'sistr', 'smncopynumbercaller', 'smoothxg', 'smoove', 'snpdists', 'snpsift', 'snpsites', 'somalier', 'sortmerna', 'spaceranger', 'spatyper', 'sratools', 'ssuissero', 'stadeniolib', 'staphopiasccmec', 'stranger', 'subread', 'survivor', 'svaba', 'svdb', 'svtk', 'svtyper', 'tabix', 'tailfindr', 'taxpasta', 'tbprofiler', 'tiara', 'tiddit', 'trimgalore', 'trimmomatic', 'ultra', 'ultraplex', 'umicollapse', 'umitools', 'universc', 'upd', 'varlociraptor', 'vcf2db', 'vcflib', 'verifybamid', 'vrhyme', 'wgsim', 'whamg', 'wisecondorx'']
 """
 import argparse
 import json
@@ -49,7 +49,7 @@ blacklist = ['hmtnote_annotate', 'mobsuite_recon']
 
 class ParseNFMod:
     """
-    failed attmpt to build a parser and Galaxy tool xml generator for nf-core module scripts and metadata.
+    mostly not working well parser and Galaxy tool xml generator for nf-core module scripts and metadata.
     Harder than is worth. Easy to deal with templating the script by writing it and then running it at run time.
     Problem is that there are things in the DDL preceding the script and they need to be introspected
     to set the templated variables. I think I give up
@@ -58,11 +58,9 @@ class ParseNFMod:
 
     def __init__(self, nft, nfy, args):
         self.infileurls = []
+        self.status = None
         self.canTest = True # build even if false?
         self.testParamList = None
-        self.chainedtestout = 'chainedtests.xls'
-        f = open(self.chainedtestout,'w')
-        f.close()
         self.testURLprefix = "https://raw.githubusercontent.com/nf-core/test-datasets/"
         self.modroot = os.path.split(nfargs.nftext)[0]
         self.tool_name = nfy["name"].replace("'",'').lower().strip()
@@ -70,32 +68,23 @@ class ParseNFMod:
         if args.nftest: # default is not
             self.tfcl.append("--nftest")
         self.local_tools = os.path.join(args.galaxy_root, "local_tools")
-        if args.nftest:
-                self.local_tools = os.path.join(args.galaxy_root, "local_tools")
-                self.repdir = os.path.join(self.local_tools, "TF", self.tool_name)
-                self.toold = os.path.join(self.local_tools, self.tool_name)
-                self.tooltestd = os.path.join(self.toold, "test-data")
-                self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
-        else:
-                self.local_tools = os.path.join(args.collpath, "tools")
-                self.repdir = os.path.join(args.collpath, "TF", self.tool_name)
-                self.toold = os.path.join(self.local_tools, self.tool_name)
-                self.tooltestd = os.path.join(self.toold, "test-data")
-                self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
-        os.makedirs(self.repdir, exist_ok=True)
-        os.makedirs(self.toold, exist_ok=True)
-        os.makedirs(self.tooltestd, exist_ok=True)
-        os.makedirs(self.local_tools, exist_ok=True)
-        self.local_tool_conf = os.path.join(self.local_tools, "local_tool_conf.xml")
-        self.tooltestd = os.path.join(self.toold, 'test-data') # for test input files to go
-        pathlib.Path(self.toold).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.tooltestd).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.repdir).mkdir(parents=True, exist_ok=True)
+        self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
+        # if args.nftest:
+                # self.local_tools = os.path.join(args.galaxy_root, "local_tools")
+                # self.repdir = os.path.join(self.local_tools, "TF", self.tool_name)
+                # self.toold = os.path.join(self.local_tools, self.tool_name)
+                # self.tooltestd = os.path.join(self.toold, "test-data")
+                # self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
+        # else
+        # pathlib.Path(self.toold).mkdir(parents=True, exist_ok=True)
+        # pathlib.Path(self.tooltestd).mkdir(parents=True, exist_ok=True)
+        # pathlib.Path(self.repdir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path('tfcl').mkdir(parents=True, exist_ok=True)
         self.scriptPrefixSubs = {}
         self.nftext = nft
         if "secret 'SENTIEON_LICENSE_" in ' '.join(nft):
             print("!!!!!!!!!!!!!!! Refusing to build a tool for a proprietary licenced binary !!!!!!!!!!!!!!!!!!!!")
-            sys.exit(0)
+            self.status = "notOS"
         self.nfyaml = nfy
         self.args = args
         self.localTestFile =  "nfgenomicstestdata.txt"
@@ -125,10 +114,10 @@ class ParseNFMod:
         if self.testParamList:
             if self.inparamcount != len(self.testParamList):
                 print("### inparamcount = ", self.inparamcount, 'but there are', len(self.testParamList), 'test parameters in', self.testParamList)
-                self.failtool('paramcount')
+                self.status = "paramcount"
         else:
               print("### no test parameters in", self.tool_name)
-              self.failtool('paramcount')
+              self.status = "paramcount"
         self.makeMeta()
         stub = self.getsection("stub:")  # not all have these - no idea what they're for
         for indx, inpdict in enumerate(self.inputpar):
@@ -210,16 +199,18 @@ class ParseNFMod:
                 "not found",
             )
 
-    def failtool(self, failtype):
+    def failtool(self, toold, failtype):
         """
         move to failed
         """
-        faildir = os.path.join(self.local_tools, failtype)
+        toolbase = os.path.split(toold)[0]
+        faildir = os.path.join(toolbase, failtype)
         if not os.path.exists(faildir):
             os.makedirs(faildir, exist_ok=True)
-        cl = ["mv", self.toold, faildir]
-        p = subprocess.run(cl)
-        print("$$$$$ moved failed tool", self.tool_name, "to", faildir)
+        src = toold
+        dest = os.path.join(faildir, self.tool_name)
+        newpath = shutil.copytree(src, dest)
+        print("$$$$$ copied failed tool", self.tool_name,'from', src, "to", dest)
         logging.shutdown()
         sys.exit(0)
 
@@ -371,8 +362,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             rawf = self.testParamList[indx]
             tdURL, validated = self.fixTDPath(rawf)
         if not validated:
-            self.failtool('badurl')
-            sys.exit(0)
+            self.status = "badurl"
         self.infileurls.append(tdURL)
         if not ppath:
             ppath = pid
@@ -383,6 +373,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             ppattern = ppattern[2:]
         fps = self.fixParamFormat(ppattern) # kludge so Galaxy doesn't get confused.
         #self.scriptPrefixSubs[pfmt] = "$%s" % pname # will be substituted in configfile
+        pdict["URL"] = tdURL # so TF can download to test-data
         pdict["CL"] = pid
         pdict["name"] = pid
         pdict["format"] = fps
@@ -391,7 +382,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         pdict["required"] = "0"
         self.tfcl.append("--input_files")
         self.tfcl.append(json.dumps(pdict))
-        self.saveTestdata(pid, tdURL)
+        #self.saveTestdata(pid, tdURL)
 
     def makeOutfile(self, inpdict):
         """
@@ -629,8 +620,8 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
             s = '\n'.join(ss)
         s = s.replace('"${task.process}"', '"${task_process}"')
         s = ''.join(fiddled) + s
-        self.scriptPath = os.path.join(self.repdir, '%s.%s' % (self.tool_name, sexe))
-        with open(self.scriptPath, "w") as f:
+        sfile, self.scriptPath = tempfile.mkstemp(prefix=self.tool_name)
+        with open(self.scriptPath, 'w') as f:
             f.write(s)
             f.write("\n")
         self.tfcl.append("--script_path")
@@ -715,11 +706,15 @@ if __name__ == "__main__":
     nfy = open(nfargs.nfyml, "r")
     nfym = yaml.safe_load(nfy)
     nfmod = ParseNFMod(nft, nfym, nfargs)
+    if nfmod.status:
+        print('#### got status', nfmod.status, 'not building')
+        sys.exit(1)
     print('@@@@@@nftoolmaker building', nfmod.tool_name)
     collpath = nfargs.collpath
     cl = nfmod.tfcl
-    with open(os.path.join(nfmod.repdir, 'ToolFactoryCL_%s.txt' % nfmod.tool_name), 'w') as fout:
-        fout.write("\n".join(cl))
+    jcl = json.dumps(' '.join(cl))
+    with open(os.path.join('tfcl', 'ToolFactoryCL_%s.txt' % nfmod.tool_name), 'w') as fout:
+        fout.write(jcl)
     args = prepargs(cl)
     assert (
         args.tool_name
@@ -728,7 +723,7 @@ if __name__ == "__main__":
     if len(white) == 0:
         print('module', args.tool_name,'not in whitelist. Not built')
         sys.exit(0)
-    logfilename = os.path.join(nfmod.repdir, "nfmodToolFactory_make_%s_log.txt" % args.tool_name)
+    logfilename = os.path.join('tfcl', "nfmodToolFactory_make_%s_log.txt" % args.tool_name)
     if not os.path.exists(collpath):
         os.makedirs(collpath, exist_ok=True)
     logger.setLevel(logging.INFO)
@@ -736,22 +731,22 @@ if __name__ == "__main__":
     fformatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     fh.setFormatter(fformatter)
     logger.addHandler(fh)
-    print("cl=", "\n".join(cl))
     tf = Tool_Factory(args)
     tf.makeTool()
+    nfmod.toold = tf.toold
     #tf.writeTFyml()
     if nfargs.nftest:
         tf.writeShedyml()
         res = tf.update_toolconf()
         if res:
             logger.error("###### update toolconf failed - is the galaxy server needed for tests available?")
-            nfmod.failtool("failinstall")
+            nfmod.failtool(tf.toold,"failinstall")
         else:
             if tf.condaenv and len(tf.condaenv) > 0:
                 iret = tf.install_deps()
                 if iret:
                     logger.error("Toolfactory unable to installed deps - failed to build")
-                    nfmod.failtool('failinstall')
+                    nfmod.failtool(tf.toold, 'faildeps')
                 else:
                     testret = tf.planemo_local_test()
                     logger.debug("Toolfactory finished test")
@@ -773,9 +768,9 @@ if __name__ == "__main__":
                         logger.info(
                             "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
                         )
-                        nfmod.failtool("failtest")
+                        nfmod.failtool(tf.toold,"failtest")
                         #tf.makeToolTar(1)
                     else:
                         tf.makeToolTar()
-                        nfmod.failtool("whitelist")
+                        nfmod.failtool(tf.toold, "whitelist")
     logging.shutdown()
