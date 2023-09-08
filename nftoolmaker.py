@@ -6,8 +6,8 @@
 # working kind of september 21 but not worth trying all modules
 # maybe just save the testdata URI and parameters plus the TF command line as artifacts
 # then make a TF tool to generate a tool based on that command line so it can be fixed.
-whitelist = """['abacas', 'admixture', 'affy', 'agat', 'agrvate', 'allelecounter', 'ampcombi', 'ampir', 'amps', 'angsd', 'arcashla', 'aria2', 'ariba', 'ashlar', 'ataqv', 'authentict', 'backsub', 'bacphlip', 'bamaligncleaner', 'bamcmp', 'bamtools', 'bbmap', 'bclconvert', 'bioawk', 'biobambam', 'biscuit', 'bismark', 'cadd', 'calder2', 'canu', 'cellpose',  'chopper', 'clippy', 'clonalframeml', 'cmseq', 'cnvpytor', 'cooler', 'crumble', 'csvtk', 'custom', 'damageprofiler', 'dastool', 'dedup', 'deeparg', 'deepbgc', 'deepcell', 'deeptools', 'dragmap', 'dragonflye', 'dshbio', 'duphold', 'ectyper', 'eido', 'eigenstratdatabasetools', 'eklipse', 'elprep', 'emmtyper', 'endorspy', 'epang', 'expansionhunter', 'expansionhunterdenovo', 'falco', 'famsa', 'faqcs', 'fastk', 'fcs', 'ffq', 'fgbio', 'flye', 'fq', 'fqtk', 'galah', 'gamma', 'gangstr', 'ganon', 'gappa', 'gawk', 'gecco', 'gem2', 'genmap', 'genmod', 'genotyphi', 'gfaffix', 'gget', 'glimpse', 'glimpse2', 'glnexus', 'gnu', 'goat', 'goleft', 'gridss', 'gstama', 'gunc', 'gunzip', 'hapibd', 'hicap', 'hlala', 'hmmcopy', 'hmtnote', 'hpsuissero', 'ichorcna', 'icountmini', 'igv', 'iphop', 'islandpath', 'ismapper', 'isoseq3', 'kaiju', 'kat', 'kmcp', 'leehom', 'lissero', 'macrel', 'mafft', 'manta', 'mapad', 'mapdamage2', 'maxquant', 'mcquant', 'mcroni', 'md5sum', 'methyldackel', 'midas', 'mindagap', 'miranda', 'mitohifi', 'mmseqs', 'mobsuite', 'motus', 'msisensor', 'msisensor2', 'msisensorpro', 'mtnucratio', 'muscle', 'nanolyse', 'nanomonsv', 'nextgenmap', 'nfc', 'ngmaster', 'ngmerge', 'ngsbits', 'nucmer', 'paftools', 'pairix', 'pairtools',  'paraclu', 'pasty', 'pbbam', 'pbccs', 'pbptyper', 'peddy', 'peka', 'phantompeakqualtools', 'phispy', 'pindel', 'pints', 'pirate', 'platypus', 'pmdtools', 'preseq', 'prodigal', 'pydamage', 'pyrodigal', 'racon', 'rasusa', 'rgi', 'rhocall', 'rsem', 'rtgtools', 'salmon', 'sam2lca', 'sambamba', 'samtools', 'scimap', 'scramble', 'segemehl', 'seqsero2', 'sequencetools', 'sequenzautils', 'seroba', 'sexdeterrmine', 'sgdemux', 'shasum', 'shigatyper', 'shigeifinder', 'shinyngs', 'simpleaf', 'sistr', 'smncopynumbercaller', 'smoothxg', 'smoove', 'snpdists', 'snpsift', 'snpsites', 'somalier', 'sortmerna', 'spaceranger', 'spatyper', 'sratools', 'ssuissero', 'stadeniolib', 'staphopiasccmec', 'stranger', 'subread', 'survivor', 'svaba', 'svdb', 'svtk', 'svtyper', 'tabix', 'tailfindr', 'taxpasta', 'tbprofiler', 'tiara', 'tiddit', 'trimgalore', 'trimmomatic', 'ultra', 'ultraplex', 'umicollapse', 'umitools', 'universc', 'upd', 'varlociraptor', 'vcf2db', 'vcflib', 'verifybamid', 'vrhyme', 'wgsim', 'whamg', 'wisecondorx'']
-"""
+
+
 import argparse
 import json
 import os
@@ -354,6 +354,7 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         pdict = {}
         pid = list(inpdict.keys())[0]
         ppath = pid
+        validated = False
         if indx > (len(self.testParamList) - 1):
             print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
             self.canTest = False
@@ -719,10 +720,6 @@ if __name__ == "__main__":
     assert (
         args.tool_name
     ), "## This nf-core module ToolFactory cannot build a tool without a tool name. Please supply one."
-    white = [x for x in whitelist if args.tool_name.startswith(x)]
-    if len(white) == 0:
-        print('module', args.tool_name,'not in whitelist. Not built')
-        sys.exit(0)
     logfilename = os.path.join('tfcl', "nfmodToolFactory_make_%s_log.txt" % args.tool_name)
     if not os.path.exists(collpath):
         os.makedirs(collpath, exist_ok=True)
