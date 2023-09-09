@@ -211,6 +211,8 @@ class ParseNFMod:
         dest = os.path.join(faildir, self.tool_name)
         newpath = shutil.copytree(src, dest)
         print("$$$$$ copied failed tool", self.tool_name,'from', src, "to", dest)
+        if failtype != "whitelist":
+            self.tf.update_toolconf(remove=True)
         logging.shutdown()
         sys.exit(0)
 
@@ -728,24 +730,24 @@ if __name__ == "__main__":
     fformatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     fh.setFormatter(fformatter)
     logger.addHandler(fh)
-    tf = Tool_Factory(args)
-    tf.makeTool()
-    nfmod.toold = tf.toold
+    nfmod.tf = Tool_Factory(args)
+    nfmod.tf.makeTool()
+    nfmod.toold = nfmod.tf.toold
     #tf.writeTFyml()
     if nfargs.nftest:
-        tf.writeShedyml()
-        res = tf.update_toolconf()
+        nfmod.tf.writeShedyml()
+        res = nfmod.tf.update_toolconf()
         if res:
             logger.error("###### update toolconf failed - is the galaxy server needed for tests available?")
-            nfmod.failtool(tf.toold,"failinstall")
+            nfmod.failtool(nfmod.tf.toold,"failinstall")
         else:
-            if tf.condaenv and len(tf.condaenv) > 0:
-                iret = tf.install_deps()
+            if nfmod.tf.condaenv and len(nfmod.tf.condaenv) > 0:
+                iret = nfmod.tf.install_deps()
                 if iret:
                     logger.error("Toolfactory unable to installed deps - failed to build")
-                    nfmod.failtool(tf.toold, 'faildeps')
+                    nfmod.failtool(nfmod.tf.toold, 'faildeps')
                 else:
-                    testret = tf.planemo_local_test()
+                    testret = nfmod.tf.planemo_local_test()
                     logger.debug("Toolfactory finished test")
                     if int(testret) > 0:
                         logger.error("ToolFactory tool build and test failed. :(")
@@ -765,9 +767,9 @@ if __name__ == "__main__":
                         logger.info(
                             "In the output collection, the tool xml <command> element must be the equivalent of your working command line for the test to work"
                         )
-                        nfmod.failtool(tf.toold,"failtest")
+                        nfmod.failtool(nfmod.tf.toold,"failtest")
                         #tf.makeToolTar(1)
                     else:
-                        tf.makeToolTar()
-                        nfmod.failtool(tf.toold, "whitelist")
+                        self.tf.makeToolTar()
+                        nfmod.failtool(nfmod.tf.toold, "whitelist")
     logging.shutdown()
