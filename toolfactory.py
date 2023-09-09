@@ -65,9 +65,10 @@ class Tool_Factory:
             % args.parampass
         )
         # sed will update these settings during tfsetup.py first run
-        self.GALAXY_ADMIN_KEY = "1402975831620450304"
+        self.GALAXY_ADMIN_KEY = "825356961458590464"
         self.GALAXY_URL = "http://localhost:8080"
         self.profile = 'profile="22.05"'
+        self.not_iuc = True
         self.args = args
         self.tool_version = self.args.tool_version
         self.myversion = "V3.0 February 2023"
@@ -892,7 +893,8 @@ class Tool_Factory:
         )
         self.newtool.add_comment("Source in git at: %s" % (self.toolFactoryURL))
         exml = self.newtool.export()
-        exml = exml.replace("<tool name", "<tool %s name" % self.profile)
+        if not self.profile in exml:
+            exml = exml.replace("<tool name", "<tool %s name" % self.profile)
         if (
             self.test_override
         ):  # cannot do this inside galaxyxml as it expects lxml objects for tests
@@ -971,7 +973,7 @@ class Tool_Factory:
             self.doNoXMLparam()
         else:
             self.makeXML()
-        if self.args.script_path:
+        if self.args.script_path and self.not_iuc:
             stname = os.path.join(self.toold, os.path.split(self.sfile)[1])
             if not os.path.exists(stname):
                 shutil.copyfile(self.sfile, stname)
@@ -991,12 +993,6 @@ class Tool_Factory:
                         dest = os.path.join(self.tooltestd, "%s_sample" % p["infilename"])
                     shutil.copyfile(pth, dest)
                     logger.info("Copied %s to %s" % (pth, dest))
-                    if np > 1:
-                        dest = os.path.join(self.repdir, "%s_%d_sample.%s" % (p["infilename"], i+1, p["format"]))
-                    else:
-                        dest = os.path.join(self.repdir, "%s_sample.%s" % (p["infilename"], p["format"]))
-                    shutil.copyfile(pth, dest)
-                    logger.info("Copied %s to %s" % (pth, dest))
                 else:
                     logger.info("Optional input path %s does not exist - not copied" % pth)
         if self.extra_files and len(self.extra_files) > 0:
@@ -1014,12 +1010,6 @@ class Tool_Factory:
             filename = tarinfo.name
             return None if filename.startswith(excludeme) else tarinfo
         logger.info("makeToolTar starting with tool test retcode=%d\n" % test_retcode)
-        for p in self.outfiles:
-            oname = p["name"]
-            src = os.path.join(self.tooltestd, "%s_sample" % oname)
-            dest = os.path.join(self.repdir, "%s_sample_%s.%s" % (oname, p["format"], p["format"]))
-            shutil.copyfile(src, dest)
-            logger.info("Copied %s to %s" % (src, dest))
         td = os.listdir(self.toold)
         for f in td:
             if f.startswith("tool_test_output"):
@@ -1105,7 +1095,7 @@ class Tool_Factory:
         shutil.copytree(src, dest, dirs_exist_ok=True)
         return p.returncode
 
-    def update_toolconf(self):
+    def update_toolconf(self, remove=False):
         """tempting to recreate it from the local_tools directory each time
         currently adds new tools if not there.
         """
@@ -1136,31 +1126,41 @@ class Tool_Factory:
             root.insert(0, TFsection)  # at the top!
         our_tools = TFsection.findall("tool")
         conf_tools = [x.attrib["file"] for x in our_tools]
-        if xmlfile not in conf_tools:  # new
-            ET.SubElement(TFsection, "tool", {"file": xmlfile})
-        sortchildrenby(TFsection, "file")
-        tree.write(tcpath, pretty_print=True)
-        gi = galaxy.GalaxyInstance(url=self.GALAXY_URL, key=self.GALAXY_ADMIN_KEY)
-        toolready = False
-        now = time.time()
-        nloop = 5
-        while nloop >= 0 and not toolready:
-            try:
-                res = gi.tools.show_tool(tool_id=self.tool_name)
-                toolready = True
-                logger.info("Tool %s ready after %f seconds - %s\n" % (self.tool_name, time.time() - now, res))
-            except ConnectionError:
-                nloop -= 1
-                time.sleep(2)
-                logger.info("Connection error - waiting 2 seconds.\n")
-        if nloop < 1:
-            logger.error(
-                "Tool %s still not ready after %f seconds - please check the form and the generated xml for errors? \n"
-                % (self.tool_name, time.time() - now)
-            )
-            return(2)
+        if not remove:
+            if xmlfile not in conf_tools:  # new
+                ET.SubElement(TFsection, "tool", {"file": xmlfile})
+            sortchildrenby(TFsection, "file")
+            tree.write(tcpath, pretty_print=True)
+            gi = galaxy.GalaxyInstance(url=self.GALAXY_URL, key=self.GALAXY_ADMIN_KEY)
+            toolready = False
+            now = time.time()
+            nloop = 5
+            while nloop >= 0 and not toolready:
+                try:
+                    res = gi.tools.show_tool(tool_id=self.tool_name)
+                    toolready = True
+                    logger.info("Tool %s ready after %f seconds - %s\n" % (self.tool_name, time.time() - now, res))
+                except ConnectionError:
+                    nloop -= 1
+                    time.sleep(2)
+                    logger.info("Connection error - waiting 2 seconds.\n")
+            if nloop < 1:
+                logger.error(
+                    "Tool %s still not ready after %f seconds - please check the form and the generated xml for errors? \n"
+                    % (self.tool_name, time.time() - now)
+                )
+                return(2)
+            else:
+                return(0)
         else:
-            return(0)
+            if xmlfile in conf_tools:  # remove
+                for rem in our_tools:
+                    if rem.attrib["file"] == xmlfile:
+                        del rem
+                        self.logger.info("### removed tool %s from %s" % (xmlfile, tcpath))
+                sortchildrenby(TFsection, "file")
+                tree.write(tcpath, pretty_print=True)
+
 
     def install_deps(self):
         """

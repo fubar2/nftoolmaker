@@ -69,22 +69,13 @@ class ParseNFMod:
             self.tfcl.append("--nftest")
         self.local_tools = os.path.join(args.galaxy_root, "local_tools")
         self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
-        # if args.nftest:
-                # self.local_tools = os.path.join(args.galaxy_root, "local_tools")
-                # self.repdir = os.path.join(self.local_tools, "TF", self.tool_name)
-                # self.toold = os.path.join(self.local_tools, self.tool_name)
-                # self.tooltestd = os.path.join(self.toold, "test-data")
-                # self.cl_coda = [ "--galaxy_root", args.galaxy_root, "--toolfactory_dir", args.toolfactory_dir, "--tfcollection", args.collpath]
-        # else
-        # pathlib.Path(self.toold).mkdir(parents=True, exist_ok=True)
-        # pathlib.Path(self.tooltestd).mkdir(parents=True, exist_ok=True)
-        # pathlib.Path(self.repdir).mkdir(parents=True, exist_ok=True)
         pathlib.Path('tfcl').mkdir(parents=True, exist_ok=True)
         self.scriptPrefixSubs = {}
         self.nftext = nft
         if "secret 'SENTIEON_LICENSE_" in ' '.join(nft):
             print("!!!!!!!!!!!!!!! Refusing to build a tool for a proprietary licenced binary !!!!!!!!!!!!!!!!!!!!")
             self.status = "notOS"
+            return
         self.nfyaml = nfy
         self.args = args
         self.localTestFile =  "nfgenomicstestdata.txt"
@@ -209,6 +200,8 @@ class ParseNFMod:
             os.makedirs(faildir, exist_ok=True)
         src = toold
         dest = os.path.join(faildir, self.tool_name)
+        if os.path.exists(dest):
+            shutil.rmtree(dest)
         newpath = shutil.copytree(src, dest)
         print("$$$$$ copied failed tool", self.tool_name,'from', src, "to", dest)
         if failtype != "whitelist":
@@ -357,15 +350,17 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         pid = list(inpdict.keys())[0]
         ppath = pid
         validated = False
-        if indx > (len(self.testParamList) - 1):
-            print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
-            self.canTest = False
-            tdURL = "missing"
-        else:
-            rawf = self.testParamList[indx]
-            tdURL, validated = self.fixTDPath(rawf)
+        if self.testParamList:
+            if indx > (len(self.testParamList) - 1):
+                print('Infile parameter', indx, 'beyond length of parsed test parameters', self.testParamList,'so cannot test')
+                self.canTest = False
+                tdURL = "missing"
+            else:
+                rawf = self.testParamList[indx]
+                tdURL, validated = self.fixTDPath(rawf)
         if not validated:
             self.status = "badurl"
+            return
         self.infileurls.append(tdURL)
         if not ppath:
             ppath = pid
@@ -718,6 +713,9 @@ if __name__ == "__main__":
     jcl = json.dumps(' '.join(cl))
     with open(os.path.join('tfcl', 'ToolFactoryCL_%s.txt' % nfmod.tool_name), 'w') as fout:
         fout.write(jcl)
+    os.makedirs(os.path.join('tfcl', nfmod.tool_name), exist_ok=True)
+    shutil.copyfile(nfargs.nftext, os.path.join('tfcl', nfmod.tool_name, os.path.split(nfargs.nftext)[1]))
+    shutil.copyfile(nfargs.nfyml, os.path.join('tfcl', nfmod.tool_name, os.path.split(nfargs.nfyml)[1]))
     args = prepargs(cl)
     assert (
         args.tool_name
@@ -770,6 +768,6 @@ if __name__ == "__main__":
                         nfmod.failtool(nfmod.tf.toold,"failtest")
                         #tf.makeToolTar(1)
                     else:
-                        self.tf.makeToolTar()
+                        # self.tf.makeToolTar()
                         nfmod.failtool(nfmod.tf.toold, "whitelist")
     logging.shutdown()
