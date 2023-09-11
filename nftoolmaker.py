@@ -6,7 +6,8 @@
 # working kind of september 21 but not worth trying all modules
 # maybe just save the testdata URI and parameters plus the TF command line as artifacts
 # then make a TF tool to generate a tool based on that command line so it can be fixed.
-
+# pandoc -f markdown -t rst -o cran.md cran.rst
+# can convert github readme.md into rst help
 
 import argparse
 import json
@@ -206,6 +207,7 @@ class ParseNFMod:
         print("$$$$$ copied failed tool", self.tool_name,'from', src, "to", dest)
         if failtype != "whitelist":
             self.tf.update_toolconf(remove=True)
+            shutil.rmtree(src)
         logging.shutdown()
         sys.exit(0)
 
@@ -502,6 +504,13 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
     def makeMeta(self):
         """
         --tool_name and so on from yaml
+        description: "A toolkit to predict antimicrobial peptides from protein sequences on a genome-wide scale."
+      homepage: "https://github.com/Legana/ampir"
+      documentation: "https://cran.r-project.org/web/packages/ampir/index.html"
+      tool_dev_url: "https://github.com/Legana/ampir"
+      doi: "10.1093/bioinformatics/btaa653"
+      licence: ["GPL v2"]
+
         """
         self.tfcl.append("--tool_name")
         self.tfcl.append(self.tool_name)
@@ -524,6 +533,9 @@ pattern: "*.{fna.gz,faa.gz,fasta.gz,fa.gz}"
         self.tfcl.append("--tool_version")
         self.tfcl.append("0.01")
         self.tfcl.append("--edit_additional_parameters")
+        if t.get("doi:", None):
+            self.tfcl.append("--citation")
+            self.tfcl.append("doi:%s" % t["doi:"])
 
     def makePackages(self, cs):
         """
@@ -710,12 +722,6 @@ if __name__ == "__main__":
     print('@@@@@@nftoolmaker building', nfmod.tool_name)
     collpath = nfargs.collpath
     cl = nfmod.tfcl
-    jcl = json.dumps(' '.join(cl))
-    with open(os.path.join('tfcl', 'ToolFactoryCL_%s.txt' % nfmod.tool_name), 'w') as fout:
-        fout.write(jcl)
-    os.makedirs(os.path.join('tfcl', nfmod.tool_name), exist_ok=True)
-    shutil.copyfile(nfargs.nftext, os.path.join('tfcl', nfmod.tool_name, os.path.split(nfargs.nftext)[1]))
-    shutil.copyfile(nfargs.nfyml, os.path.join('tfcl', nfmod.tool_name, os.path.split(nfargs.nfyml)[1]))
     args = prepargs(cl)
     assert (
         args.tool_name
@@ -731,7 +737,11 @@ if __name__ == "__main__":
     nfmod.tf = Tool_Factory(args)
     nfmod.tf.makeTool()
     nfmod.toold = nfmod.tf.toold
-    #tf.writeTFyml()
+    jcl = json.dumps(' '.join(cl))
+    with open(os.path.join(nfmod.tf.repdir, 'ToolFactoryCL_%s.json' % nfmod.tool_name), 'w') as fout:
+        fout.write(jcl)
+    shutil.copyfile(nfargs.nftext, os.path.join(nfmod.tf.repdir, os.path.split(nfargs.nftext)[1]))
+    shutil.copyfile(nfargs.nfyml, os.path.join(nfmod.tf.repdir, os.path.split(nfargs.nfyml)[1]))
     if nfargs.nftest:
         nfmod.tf.writeShedyml()
         res = nfmod.tf.update_toolconf()

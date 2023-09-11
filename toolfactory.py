@@ -65,8 +65,9 @@ class Tool_Factory:
             % args.parampass
         )
         # sed will update these settings during tfsetup.py first run
-        self.GALAXY_ADMIN_KEY = "825356961458590464"
+        self.GALAXY_ADMIN_KEY = "1402975831620450304"
         self.GALAXY_URL = "http://localhost:8080"
+        self.args = args
         self.profile = 'profile="22.05"'
         self.not_iuc = True
         self.args = args
@@ -186,7 +187,7 @@ class Tool_Factory:
                     self.args.packages.split(",")[0].split(":")[0].strip(),
                 ]
             else:
-                self.executeme = None
+                self.executeme = []
         aXCL = self.xmlcl.append
         self.newtarpath = args.tested_tool_out
         self.tinputs = gxtp.Inputs()
@@ -1156,8 +1157,8 @@ class Tool_Factory:
             if xmlfile in conf_tools:  # remove
                 for rem in our_tools:
                     if rem.attrib["file"] == xmlfile:
-                        del rem
-                        self.logger.info("### removed tool %s from %s" % (xmlfile, tcpath))
+                        rem.getparent().remove(rem)
+                        self.logger.info("###=============== removed tool %s from %s" % (xmlfile, tcpath))
                 sortchildrenby(TFsection, "file")
                 tree.write(tcpath, pretty_print=True)
 
